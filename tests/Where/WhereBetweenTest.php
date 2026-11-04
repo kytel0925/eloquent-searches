@@ -5,24 +5,22 @@ namespace Tests\Where;
 use SlothDevGuy\Searches\Where\SearchWhereBuilder;
 use SlothDevGuy\Searches\Where\WhereBetween;
 use Tests\TestCase;
-use Tests\WithDB;
 
 /**
  * Class WhereBetween
- * @package Tests\Where
  */
 class WhereBetweenTest extends TestCase
 {
     use MockSearcher, WhereBuilderAssertions;
 
-    public function testBetween()
+    public function test_between()
     {
         $field = 'foo';
         $values = ['range_1', 'range_2'];
 
         $aliases = ['between', 'where-between', '><'];
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $key = implode('|', array_filter([$field, $alias]));
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -36,12 +34,12 @@ class WhereBetweenTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $values,
-                ]
+                ],
             ]);
         }
     }
 
-    public function testNotBetween()
+    public function test_not_between()
     {
         $field = 'foo';
         $values = ['range_1', 'range_2'];
@@ -49,7 +47,7 @@ class WhereBetweenTest extends TestCase
         $aliases = ['between', 'where-between', '><'];
         $negations = collect(['not', '!']);
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $not = $negations->random();
             $key = implode('|', array_filter([$field, $not, $alias]));
 
@@ -64,7 +62,7 @@ class WhereBetweenTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $values,
-                ]
+                ],
             ]);
         }
     }

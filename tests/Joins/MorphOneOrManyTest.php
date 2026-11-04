@@ -5,17 +5,16 @@ namespace Tests\Joins;
 use SlothDevGuy\Searches\Join\JoinMorphOneOrMany;
 use SlothDevGuy\Searches\Join\JoinMorphTo;
 use SlothDevGuy\Searches\Join\SearchJoinRelationshipBuilder;
-use Tests\database\Attachment;
-use Tests\database\Comment;
+use Tests\Fixtures\Models\Attachment;
+use Tests\Fixtures\Models\Comment;
 use Tests\TestCase;
 
 class MorphOneOrManyTest extends TestCase
 {
-    use MockSearcher, JoinBuilderAssertions;
+    use JoinBuilderAssertions, MockSearcher;
 
-    public function testJoins()
+    public function test_joins()
     {
-        $this->loadTestModels();
 
         $joinData = [
             'values' => [],
@@ -24,22 +23,22 @@ class MorphOneOrManyTest extends TestCase
             'relation' => 'attachments',
             'foreign_type' => 'owner_type',
             'foreign_key' => 'owner_id',
-            'aliases' => [null, 'foo', 'bar']
+            'aliases' => [null, 'foo', 'bar'],
         ];
 
         $joinTypes = [null, 'join', 'left-join'];
 
         $from = [
-            'model' => $model = new Comment(),
+            'model' => $model = new Comment,
             'table' => $model->getTable(),
         ];
 
-        foreach ($joinTypes as $index => $joinType){
+        foreach ($joinTypes as $index => $joinType) {
             $alias = data_get($joinData, "aliases.{$index}");
 
             $join = collect([
-                $joinData['relation'] . ($alias? "@$alias" : ''),
-                $joinType
+                $joinData['relation'].($alias ? "@$alias" : ''),
+                $joinType,
             ])->filter()->implode('|');
 
             /** @var SearchJoinRelationshipBuilder $joinBuilder */
@@ -47,21 +46,21 @@ class MorphOneOrManyTest extends TestCase
 
             $this->assertNotNull($joinBuilder);
 
-            $join = $alias? "{$joinData['table']} as {$alias}" : $joinData['table'];
-            $joinContext = $alias? : $joinData['table'];
+            $join = $alias ? "{$joinData['table']} as {$alias}" : $joinData['table'];
+            $joinContext = $alias ?: $joinData['table'];
 
             $this->assertJoinBuilder($joinBuilder, [
                 'join_instance_of' => JoinMorphOneOrMany::class,
                 'related_instance_of' => $joinData['model'],
-                'method' => $joinType? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
+                'method' => $joinType ? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
                 'arguments' => [
                     [
                         'table' => $join,
                         'arguments' => [
-                            function(){ },
+                            function () {},
                         ],
                     ],
-                ]
+                ],
             ]);
 
             /** @var JoinMorphOneOrMany $join */
@@ -82,9 +81,8 @@ class MorphOneOrManyTest extends TestCase
         }
     }
 
-    public function testInverseJoin()
+    public function test_inverse_join()
     {
-        $this->loadTestModels();
 
         $joinData = [
             'values' => [],
@@ -93,22 +91,22 @@ class MorphOneOrManyTest extends TestCase
             'relation' => 'owner',
             'foreign_type' => 'owner_type',
             'foreign_key' => 'owner_id',
-            'aliases' => [null, 'foo', 'bar']
+            'aliases' => [null, 'foo', 'bar'],
         ];
 
         $joinTypes = [null, 'join', 'left-join'];
 
         $from = [
-            'model' => $model = new Attachment(),
+            'model' => $model = new Attachment,
             'table' => $model->getTable(),
         ];
 
-        foreach ($joinTypes as $index => $joinType){
+        foreach ($joinTypes as $index => $joinType) {
             $alias = data_get($joinData, "aliases.{$index}");
 
             $join = collect([
-                $joinData['relation'] . ($alias? "@$alias" : '') . ':' . Comment::class,
-                $joinType
+                $joinData['relation'].($alias ? "@$alias" : '').':'.Comment::class,
+                $joinType,
             ])->filter()->implode('|');
 
             /** @var SearchJoinRelationshipBuilder $joinBuilder */
@@ -116,21 +114,21 @@ class MorphOneOrManyTest extends TestCase
 
             $this->assertNotNull($joinBuilder);
 
-            $join = $alias? "{$joinData['table']} as {$alias}" : $joinData['table'];
-            $joinContext = $alias? : $joinData['table'];
+            $join = $alias ? "{$joinData['table']} as {$alias}" : $joinData['table'];
+            $joinContext = $alias ?: $joinData['table'];
 
             $this->assertJoinBuilder($joinBuilder, [
                 'join_instance_of' => JoinMorphTo::class,
                 'related_instance_of' => $joinData['model'],
-                'method' => $joinType? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
+                'method' => $joinType ? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
                 'arguments' => [
                     [
                         'table' => $join,
                         'arguments' => [
-                            function(){ },
+                            function () {},
                         ],
                     ],
-                ]
+                ],
             ]);
 
             /** @var JoinMorphOneOrMany $join */

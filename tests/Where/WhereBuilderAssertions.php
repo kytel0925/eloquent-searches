@@ -6,13 +6,10 @@ use SlothDevGuy\Searches\Where\SearchWhereBuilder;
 
 /**
  * Trait AssertWhereBuilderDefaults
- * @package Tests\Where
  */
 trait WhereBuilderAssertions
 {
     /**
-     * @param SearchWhereBuilder $whereBuilder
-     * @param array $expected
      * @return void
      */
     protected function assertWhereBuilder(SearchWhereBuilder $whereBuilder, array $expected)
@@ -31,7 +28,22 @@ trait WhereBuilderAssertions
 
         $this->assertSameSize($expectedArguments, $whereArguments);
 
-        foreach ($expectedArguments as $index => $value)
-            $this->assertEquals($value, $whereArguments[$index]);
+        foreach ($expectedArguments as $index => $value) {
+            $this->assertArgumentEquals($value, $whereArguments[$index]);
+        }
+    }
+
+    /**
+     * Closures can not be compared, so only their type is asserted.
+     */
+    protected function assertArgumentEquals(mixed $expected, mixed $actual): void
+    {
+        if ($expected instanceof \Closure) {
+            $this->assertInstanceOf(\Closure::class, $actual);
+
+            return;
+        }
+
+        $this->assertEquals($expected, $actual);
     }
 }

@@ -29,26 +29,28 @@ trait JoinBuilderAssertions
 
         $joins = $join->joins();
 
-        foreach ($joins as $indexPayload => $joinPayload){
+        foreach ($joins as $indexPayload => $joinPayload) {
             $expectedJoin = data_get($expected, "arguments.{$indexPayload}", []);
 
             $joinArguments = array_values(data_get($joinPayload, 'arguments', []));
 
-            //table
+            // table
             $table = data_get($joinPayload, 'table');
-            $expectedTable = data_get($expectedJoin, "table");
+            $expectedTable = data_get($expectedJoin, 'table');
             $this->assertEquals($expectedTable, $table);
 
             $expectedJoinArguments = data_get($expectedJoin, 'arguments');
             $this->assertSameSize($expectedJoinArguments, $joinArguments);
 
-            foreach ($joinArguments as $index => $value)
-                $this->assertEquals($value, $expectedJoinArguments[$index]);
-        }
-    }
+            foreach ($joinArguments as $index => $value) {
+                if ($value instanceof \Closure) {
+                    $this->assertInstanceOf(\Closure::class, $expectedJoinArguments[$index]);
 
-    protected function loadTestModels()
-    {
-        require_once __DIR__ . '/../database/models.test';
+                    continue;
+                }
+
+                $this->assertEquals($value, $expectedJoinArguments[$index]);
+            }
+        }
     }
 }

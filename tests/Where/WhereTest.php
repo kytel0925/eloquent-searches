@@ -8,7 +8,6 @@ use Tests\TestCase;
 
 /**
  * Class WhereTest
- * @package Tests\Where
  */
 class WhereTest extends TestCase
 {
@@ -17,7 +16,7 @@ class WhereTest extends TestCase
     /**
      * @return void
      */
-    public function testEquals()
+    public function test_equals()
     {
         $key = 'foo';
         $value = 'bar';
@@ -33,21 +32,21 @@ class WhereTest extends TestCase
             'arguments' => [
                 "test.{$key}",
                 '=',
-                $value
-            ]
+                $value,
+            ],
         ]);
     }
 
     /**
      * @return void
      */
-    public function testOperators()
+    public function test_operators()
     {
         $operators = ['=', '<>', '>', '>=', '<', '<=', '%_%', '_%', '%_'];
         $field = 'foo';
         $value = 'bar';
 
-        foreach ($operators as $operator){
+        foreach ($operators as $operator) {
             $key = "$field|$operator";
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -55,7 +54,7 @@ class WhereTest extends TestCase
 
             $this->assertNotNull($whereBuilder);
 
-            if(in_array($operator, ['%_%', '_%', '%_'])){
+            if (in_array($operator, ['%_%', '_%', '%_'])) {
                 $value = str_replace('_', $value, $operator);
                 $operator = 'like';
             }
@@ -66,8 +65,8 @@ class WhereTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $operator,
-                    $value
-                ]
+                    $value,
+                ],
             ]);
         }
     }
@@ -75,7 +74,7 @@ class WhereTest extends TestCase
     /**
      * @return void
      */
-    public function testNegation()
+    public function test_negation()
     {
         $negatedOperators = [
             '=' => '<>',
@@ -92,8 +91,8 @@ class WhereTest extends TestCase
         $field = 'foo';
         $value = 'bar';
 
-        foreach ($negatedOperators as $operator => $negatedOperator){
-            $not = collect([true, false])->random()? 'not' : '!';
+        foreach ($negatedOperators as $operator => $negatedOperator) {
+            $not = collect([true, false])->random() ? 'not' : '!';
 
             $key = "$field|$not|$operator";
 
@@ -102,7 +101,7 @@ class WhereTest extends TestCase
 
             $this->assertNotNull($whereBuilder);
 
-            if(in_array($operator, ['%_%', '_%', '%_'])){
+            if (in_array($operator, ['%_%', '_%', '%_'])) {
                 $value = str_replace('_', $value, $operator);
             }
 
@@ -112,8 +111,8 @@ class WhereTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $negatedOperator,
-                    $value
-                ]
+                    $value,
+                ],
             ]);
         }
     }
@@ -121,7 +120,7 @@ class WhereTest extends TestCase
     /**
      * @return void
      */
-    protected function testWhereCustomArguments()
+    protected function test_where_custom_arguments()
     {
         $field = 'foo';
         $operator = 'regexp';
@@ -140,8 +139,8 @@ class WhereTest extends TestCase
             'arguments' => [
                 "test.{$field}",
                 $operator,
-                $value
-            ]
+                $value,
+            ],
         ]);
     }
 }

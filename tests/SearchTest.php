@@ -3,24 +3,20 @@
 namespace Tests;
 
 use SlothDevGuy\Searches\Search;
-use Tests\database\Location;
-use Tests\database\Person;
+use Tests\Fixtures\Models\Location;
+use Tests\Fixtures\Models\Person;
 
 class SearchTest extends TestCase
 {
-    use WithDB;
-
     /**
      * this test are design to ensure the query builder syntax
      *
      * @return void
      */
-    public function testJoins()
+    public function test_joins()
     {
-        $this->loadTestModels();
-        $this->migrate();
 
-        $search = new Search(new Person(), [
+        $search = new Search(new Person, [
             'addresses' => [
                 'country' => [
                     'id|>' => 1,
@@ -29,7 +25,7 @@ class SearchTest extends TestCase
                     'title' => 'foo-tag',
                 ],
                 'location' => [
-                    'name' => 'bar-city'
+                    'name' => 'bar-city',
                 ],
             ],
             'tasks' => [
@@ -47,7 +43,7 @@ class SearchTest extends TestCase
 
         $sql = $search->builder()->toSql();
 
-        //remove the quotes to more simple assertions
+        // remove the quotes to more simple assertions
         $sql = str_replace(["'", '"', '`'], '', $sql);
 
         $whereFields = [
@@ -59,8 +55,9 @@ class SearchTest extends TestCase
             'tasks.complete',
             'tasks.created_at',
         ];
-        foreach ($whereFields as $whereField)
+        foreach ($whereFields as $whereField) {
             $this->assertStringContainsString($whereField, $sql);
+        }
 
         $bindings = $search->builder()->getBindings();
         $wheres = [
@@ -72,16 +69,15 @@ class SearchTest extends TestCase
             '2012-01-01',
             '2022-01-01',
         ];
-        foreach ($wheres as $where)
+        foreach ($wheres as $where) {
             $this->assertContains($where, $bindings);
+        }
     }
 
-    public function testJoinAndPagination()
+    public function test_join_and_pagination()
     {
-        $this->loadTestModels();
-        $this->migrate();
 
-        $search = new Search(new Person(), [
+        $search = new Search(new Person, [
             'tasks' => [
                 'comments' => [
                     'likes|>' => 5,
@@ -100,15 +96,13 @@ class SearchTest extends TestCase
         $this->assertEquals(1, $pagination['page']);
     }
 
-    public function testJoinRelationWithKebabSyntax()
+    public function test_join_relation_with_kebab_syntax()
     {
-        $this->loadTestModels();
-        $this->migrate();
 
-        $search = eloquent_search(new Location(), [
+        $search = eloquent_search(new Location, [
             'administrative-division' => [
 
-            ]
+            ],
         ]);
 
         $this->assertNotNull($search->get());
