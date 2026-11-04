@@ -4,46 +4,33 @@ namespace SlothDevGuy\Searches\ResponseModels;
 
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use JsonSerializable;
 use SlothDevGuy\Searches\Interfaces\ItemResponseSchemaInterface;
 
 /**
- * Class ItemResponse
- * @package SlothDevGuy\Searches\ResponseModels
+ * Maps one model of the search results into its array (JSON) representation.
+ *
+ * @phpstan-consistent-constructor
  */
-class ItemResponseSchema implements ItemResponseSchemaInterface
+class ItemResponseSchema implements ItemResponseSchemaInterface, JsonSerializable
 {
-    /**
-     * @var array
-     */
     protected array $map = [];
 
-    /**
-     * @var array|null
-     */
     protected ?array $only = null;
 
-    /**
-     * @var array|null
-     */
     protected ?array $except = null;
 
-    /**
-     * @param Model|null $item
-     */
     public function __construct(
         protected ?Model $item = null
-    )
-    {
-
-    }
+    ) {}
 
     /**
-     * @param mixed $item
+     * @param  mixed  $item
      * @return Model
      */
     public function item($item = null)
     {
-        if(!is_null($item)){
+        if (! is_null($item)) {
             $this->item = $item;
             $this->map = [];
         }
@@ -52,28 +39,27 @@ class ItemResponseSchema implements ItemResponseSchemaInterface
     }
 
     /**
-     * @inheritDoc
-     * @return array
+     * {@inheritDoc}
      */
     public function map(): array
     {
-        if(!$this->item()){
+        if (! $this->item()) {
             return [];
         }
 
-        if(empty($this->map)){
+        if (empty($this->map)) {
             $this->map = $this->mapItem();
         }
 
         $map = $this->map;
 
-        if(!is_null($this->only)){
+        if (! is_null($this->only)) {
             $map = collect($map)
                 ->only($this->only)
                 ->toArray();
         }
 
-        if(!is_null($this->except)){
+        if (! is_null($this->except)) {
             $map = collect($map)
                 ->except($this->except)
                 ->toArray();
@@ -83,11 +69,9 @@ class ItemResponseSchema implements ItemResponseSchemaInterface
     }
 
     /**
-     * @inheritDoc
-     * @param array|null $keys
-     * @return ItemResponseSchemaInterface
+     * {@inheritDoc}
      */
-    public function only(array $keys = null): ItemResponseSchemaInterface
+    public function only(?array $keys = null): ItemResponseSchemaInterface
     {
         $this->only = $keys;
 
@@ -95,48 +79,45 @@ class ItemResponseSchema implements ItemResponseSchemaInterface
     }
 
     /**
-     * @inheritDoc
-     * @param array|null $keys
-     * @return ItemResponseSchemaInterface
+     * {@inheritDoc}
      */
-    public function except(array $keys = null): ItemResponseSchemaInterface
+    public function except(?array $keys = null): ItemResponseSchemaInterface
     {
         $this->except = $keys;
 
         return $this;
     }
 
-    /**
-     * @return array
-     */
-    protected function mapItem() : array
+    protected function mapItem(): array
     {
         return $this->item()->toArray();
     }
 
-    /**
-     * @return array
-     */
-    public function toArray()
+    public function toArray(): array
     {
         return $this->map();
     }
 
     /**
-     * @param int $options
+     * @param  int  $options
      * @return false|string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): string
     {
-        return json_encode($this->toArray(), $options);
+        return (string) json_encode($this->toArray(), $options);
     }
 
     /**
-     * @return Closure
+     * @return array<array-key, mixed>
      */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
+    }
+
     public static function mapEach(): Closure
     {
-        return function (Model $model){
+        return function (Model $model) {
             return new static($model);
         };
     }

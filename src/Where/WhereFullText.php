@@ -2,114 +2,68 @@
 
 namespace SlothDevGuy\Searches\Where;
 
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
+
 /**
- * Class WhereFullText
- * @package SlothDevGuy\Searches\Where
+ * ['title,body|full-text' => 'laravel'] adds a full text condition over one or more columns.
+ *
+ * Values shorter than "searches.full_text.min_length" are ignored.
  */
 class WhereFullText extends BaseWhere
 {
-    /**
-     * @var array|string[]
-     */
     protected static array $supportedMethods = ['whereFullText', 'orWhereFullText'];
 
     /**
-     * @var array|string[]
+     * @var array<string, string>
      */
     protected static array $negatedMethods = [
         'whereFullText' => 'whereNot',
         'orWhereFullText' => 'orWhereNot',
     ];
 
-    /**
-     * @var null
-     */
-    protected $negatedMethod = null;
+    protected ?string $negatedMethod = null;
 
-    /**
-     * @return $this|WhereFullText
-     */
-    protected function negateIfRequired()
+    protected function negateIfRequired(): static
     {
         $arguments = $this->arguments();
 
-        if($arguments->not()) {
-            $this->negatedMethod = static::$negatedMethods[$arguments->method()];
+        if ($arguments->not()) {
+            $this->negatedMethod = static::$negatedMethods[$arguments->method()] ?? null;
         }
 
         return $this;
     }
 
-    /**
-     * @return array
-     */
     public function where(): array
     {
         $arguments = $this->arguments();
 
-        //check if we need to change the operator
+        $this->syncMethodWithOperand();
         $this->negateIfRequired();
 
-        //or the method for the operand
-        $this->syncMethodWithOperand();
-
-        //unpack field, operator and value
-        $columns = collect($arguments->field())
-            ->map(fn($field) => $this->getQualifiedField($field))
-            ->toArray();
+        $columns = array_map(fn (string $field) => $this->getQualifiedField($field), $this->columns());
         $value = $arguments->value();
 
-        //check value type
-        if($response = $this->isValeInvalid($value)){
-            return $response;
+        if (! is_scalar($value) && ! is_null($value)) {
+            throw InvalidSearchCondition::invalidValue('full text searches expect a single value');
+        }
+
+        if (mb_strlen((string) $value) < (int) config('searches.full_text.min_length', 3)) {
+            return static::skip('value-too-short');
         }
 
         $method = $arguments->method();
-        $arguments = compact('columns', 'value');
 
-        //if a negated method is present a closure must be offered
-        if($this->negatedMethod){
-            $callback = function ($query) use($method, $arguments) {
-                $arguments = array_values($arguments);
-
-                $query->{$method}(...$arguments);
-            };
-
+        if ($this->negatedMethod) {
             return [
                 'method' => $this->negatedMethod,
-                'arguments' => [$callback],
+                'arguments' => [fn ($query) => $query->whereFullText($columns, $value)],
             ];
         }
 
-        //pack where method and arguments
         return [
             'method' => $method,
             'arguments' => compact('columns', 'value'),
         ];
-    }
-
-    /**
-     * @param mixed $value
-     * @return array|false
-     */
-    protected function isValeInvalid(mixed $value)
-    {
-        if(is_array($value)){
-            return [
-                'method' => null,
-                'reason' => 'array-value',
-                'action' => 'skip-where',
-            ];
-        }
-
-        if(strlen($value) <= 3){
-            return [
-                'method' => null,
-                'reason' => 'value-must-have-at-least-3-characters',
-                'action' => 'skip-where',
-            ];
-        }
-
-        return false;
     }
 }

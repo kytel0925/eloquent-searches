@@ -31,7 +31,7 @@ class WhereColumnTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     '=',
-                    $value,
+                    "test.{$value}",
                 ],
             ]);
         }
@@ -61,7 +61,7 @@ class WhereColumnTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $operator,
-                    $value,
+                    "test.{$value}",
                 ],
             ]);
         }
@@ -100,7 +100,7 @@ class WhereColumnTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $negatedOperator,
-                    $value,
+                    "test.{$value}",
                 ],
             ]);
         }

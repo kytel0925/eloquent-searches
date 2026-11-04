@@ -3,6 +3,9 @@
 namespace SlothDevGuy\Searches\Http\Actions;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
+use LogicException;
+use SlothDevGuy\Searches\Exceptions\SearchException;
 use SlothDevGuy\Searches\Http\Requests\SearchRequest;
 use SlothDevGuy\Searches\Interfaces\ItemResponseSchemaInterface as ItemResponse;
 use SlothDevGuy\Searches\Interfaces\SearchResponseSchemaInterface as SearchResponse;
@@ -10,157 +13,156 @@ use SlothDevGuy\Searches\ResponseModels\ItemResponseSchema;
 use SlothDevGuy\Searches\ResponseModels\SearchResponseSchema;
 use SlothDevGuy\Searches\Searcher;
 
+/**
+ * Runs a search from a SearchRequest and builds the response schema.
+ *
+ *     public function index(SearchAction $action)
+ *     {
+ *         return $action->handle(Post::class);
+ *     }
+ *
+ * Invalid conditions (unknown or forbidden fields, bad values...) are reported as a
+ * ValidationException, which Laravel renders as a 422 response.
+ */
 class SearchAction
 {
     /**
-     * @var string
+     * @var class-string<SearchResponse>
      */
     protected static string $defaultResponseClass = SearchResponseSchema::class;
 
     /**
-     * @var string
+     * @var class-string<ItemResponse>
      */
     protected static string $defaultResponseItemClass = ItemResponseSchema::class;
 
-    /**
-     * @var SearchResponse
-     */
-    protected SearchResponse $response;
+    protected ?SearchResponse $response = null;
 
     /**
-     * @var array
+     * @var array<string, mixed>
      */
     protected array $options = [];
 
-    /**
-     * @var Model
-     */
-    protected Model $from;
+    protected ?Model $from = null;
 
     /**
-     * @param SearchRequest $request
-     * @param array $options
+     * @param  array<string, mixed>  $options
      */
     public function __construct(
         protected SearchRequest $request,
         array $options = [],
-    )
-    {
-        $options['group'] = $this->request->group();
-
-        $this->options(array_merge($this->options, $options));
+    ) {
+        $this->options(array_merge($this->request->searchOptions(), $this->options, $options));
     }
 
     /**
-     * @param array|null $options
-     * @return array
+     * Run the search over a model and return the response.
+     *
+     * @param  Model|class-string<Model>  $from
+     *
+     * @throws ValidationException
      */
-    public function options(array $options = null): array
+    public function handle(Model|string $from): SearchResponse
     {
-        if(!is_null($options)){
+        $this->from(is_string($from) ? new $from : $from);
+
+        $this->execute();
+
+        return $this->response();
+    }
+
+    /**
+     * Get (or replace) the search options.
+     *
+     * @param  array<string, mixed>|null  $options
+     * @return array<string, mixed>
+     */
+    public function options(?array $options = null): array
+    {
+        if (! is_null($options)) {
             $this->options = $options;
         }
 
         return $this->options;
     }
 
-    /**
-     * Set the distinct flag
-     *
-     * @param bool $flag
-     * @return bool
-     */
     public function distinct(bool $flag = true): bool
     {
-        data_set($this->options, 'distinct', $flag);
+        $this->options['distinct'] = $flag;
 
-        return data_get($this->options, 'distinct');
+        return $flag;
     }
 
     /**
-     * Add a group field
+     * Add a group by column.
      *
-     * @param string $field
-     * @return array
+     * @return array<int, string>
      */
     public function group(string $field): array
     {
-        $groups = data_get($this->options, 'group');
+        $this->options['group'] = [...(array) ($this->options['group'] ?? []), $field];
 
-        $groups[] = $field;
-
-        data_set($this->options, 'group', $groups);
-
-        return $groups;
+        return $this->options['group'];
     }
-    
-    /**
-     * Returns the request object
-     *
-     * @return SearchRequest
-     */
+
     public function request(): SearchRequest
     {
         return $this->request;
     }
 
     /**
-     * Gets or sets the response schema returned by this action
+     * Get (or set) the response built by execute().
      *
-     * @param SearchResponse|null $response
-     * @return SearchResponse
+     * @throws LogicException when the search was not executed yet
      */
-    public function response(SearchResponse $response = null): SearchResponse
+    public function response(?SearchResponse $response = null): SearchResponse
     {
-        if(!is_null($response)){
+        if (! is_null($response)) {
             $this->response = $response;
         }
 
-        return $this->response;
+        return $this->response ?? throw new LogicException('Call execute() before reading the search response.');
     }
 
     /**
-     * Gets or sets the form model instance from with the query builder will be instanced
+     * Get (or set) the model the search starts from.
      *
-     * @param Model|null $from
-     * @return Model
+     * @throws LogicException when no model was set
      */
-    public function from(Model $from = null): Model
+    public function from(?Model $from = null): Model
     {
-        if(!is_null($from)){
+        if (! is_null($from)) {
             $this->from = $from;
         }
 
-        return $this->from;
+        return $this->from ?? throw new LogicException('Set the model to search with from() before executing the search.');
     }
 
     /**
-     * @return void
+     * @throws ValidationException
      */
     public function execute(): void
     {
-        $from = $this->from();
-        $conditions = $this->request()->getConditions();
-        $options = $this->options();
-        $class = class_basename($this);
+        $search = eloquent_search($this->from(), $this->request()->getConditions(), $this->options());
 
-        logger()->debug("$class::execute search", compact('from', 'conditions', 'options'));
-
-        $search = eloquent_search($from, $conditions, $options);
+        try {
+            // build the query now, so invalid conditions are reported before the response is rendered
+            $search->builder();
+            $search->getLastBuilder();
+        } catch (SearchException $exception) {
+            throw ValidationException::withMessages([
+                $exception->key() ?? 'search' => $exception->getMessage(),
+            ]);
+        }
 
         $this->response(static::buildSearchResponse($search, $this->options()));
     }
 
     /**
-     * Build a new search response
-     *
-     * @param Searcher $search
-     * @param array $options
-     * @return SearchResponse
+     * @param  array<string, mixed>  $options
      */
     public static function buildSearchResponse(Searcher $search, array $options): SearchResponse
     {
-        /** @var SearchResponseSchema $responseClass */
         $responseClass = static::$defaultResponseClass;
 
         return $responseClass::fromSearch($search)
@@ -168,15 +170,10 @@ class SearchAction
     }
 
     /**
-     * Builds a new item response
-     *
-     * @param array $options
-     * @return ItemResponse
+     * @param  array<string, mixed>  $options
      */
     public static function buildItemResponse(array $options): ItemResponse
     {
-        $responseItemClass = static::$defaultResponseItemClass;
-
-        return new $responseItemClass();
+        return new static::$defaultResponseItemClass;
     }
 }

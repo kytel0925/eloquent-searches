@@ -2,36 +2,27 @@
 
 namespace SlothDevGuy\Searches\Join;
 
-use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Database\Query\JoinClause;
 
 /**
- * Class JoinMorphOneOrMany
- * @package SlothDevGuy\Searches\Join
+ * Joins a morph-one or morph-many relationship.
  */
 class JoinMorphOneOrMany extends JoinRelationship
 {
-    /**
-     * @param Model $from
-     * @param MorphOneOrMany $relationship
-     * @param array $options
-     */
     public function __construct(
         protected Model $from,
         protected MorphOneOrMany $relationship,
-        array      $options = [],
-    )
-    {
+        array $options = [],
+    ) {
         $this->options = static::defaultOptions($options);
     }
 
     /**
      * @return array[]
      */
-    public function joins() : array
+    public function joins(): array
     {
         $baseJoin = [
             'table' => $this->getJoinContext(),
@@ -41,10 +32,7 @@ class JoinMorphOneOrMany extends JoinRelationship
         return [$baseJoin];
     }
 
-    /**
-     * @return array
-     */
-    public function on() : array
+    public function on(): array
     {
         $relationship = $this->relationship;
 
@@ -55,10 +43,7 @@ class JoinMorphOneOrMany extends JoinRelationship
         return compact('first', 'operator', 'second');
     }
 
-    /**
-     * @return array
-     */
-    public function wheres() : array
+    public function wheres(): array
     {
         $relationship = $this->relationship;
 
@@ -71,20 +56,12 @@ class JoinMorphOneOrMany extends JoinRelationship
         ];
     }
 
-
-    /**
-     * @return string
-     */
-    public function getModelClass() : string
+    public function getModelClass(): string
     {
-        return morph_model_alias($this->from())? : get_class($this->from());
+        return morph_model_alias($this->from()) ?: get_class($this->from());
     }
 
-    /**
-     * @param Relation $relationship
-     * @return bool
-     */
-    public static function instanceOf(Relation $relationship) : bool
+    public static function instanceOf(Relation $relationship): bool
     {
         return $relationship instanceof MorphOneOrMany;
     }

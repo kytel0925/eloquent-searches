@@ -2,58 +2,43 @@
 
 namespace SlothDevGuy\Searches;
 
-use SlothDevGuy\Searches\Where\WhereArguments;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use SlothDevGuy\Searches\Where\WhereArguments;
 
 /**
- * Interface WhereBuilder
- * @package SlothDevGuy\Searches
+ * Builds one family of where clauses (where, whereIn, whereNull...).
  */
 interface WhereBuilder
 {
     /**
-     * @return WhereBuilder
+     * Return the where builder that should handle the condition (itself by default).
      */
-    public function redirect() : WhereBuilder;
+    public function redirect(): WhereBuilder;
+
+    public function from(): Model;
+
+    public function getQualifiedField(string $field): string;
 
     /**
-     * @return Model
+     * Columns of the searched model referenced by this where (checked by the search guard).
+     *
+     * @return array<int, string>
      */
-    public function from() : Model;
+    public function columns(): array;
 
     /**
-     * @param string $field
-     * @return string
+     * The query builder method and its arguments; a null method skips the where.
+     *
+     * @return array{method: string|null, arguments?: array<array-key, mixed>}
      */
-    public function getQualifiedField(string $field) : string;
+    public function where(): array;
 
-    /**
-     * @return array
-     */
-    public function where() : array;
+    public function pushInBuilder(Builder $builder): Builder;
 
-    /**
-     * @param Builder $builder
-     * @return Builder
-     */
-    public function pushInBuilder(Builder $builder) : Builder;
+    public function arguments(): WhereArguments;
 
-    /**
-     * @return WhereArguments
-     */
-    public function arguments() : WhereArguments;
+    public function option(string $key, mixed $default = null): mixed;
 
-    /**
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
-     */
-    public function option(string $key, $default = null);
-
-    /**
-     * @param string $method
-     * @return bool
-     */
-    public static function supportsMethod(string $method) : bool;
+    public static function supportsMethod(string $method): bool;
 }

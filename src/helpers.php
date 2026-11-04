@@ -1,61 +1,49 @@
 <?php
 
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use SlothDevGuy\Searches\Search;
 use SlothDevGuy\Searches\Searcher;
 
-if(!function_exists('morph_model_alias')){
+if (! function_exists('eloquent_search')) {
     /**
-     * Retrieve the register model alias in morph relationships
+     * Create a new search over a model.
      *
-     * @param Model|string $model
-     * @param bool $strict
-     * @return string|null
+     * @param  Model|class-string<Model>  $from
+     * @param  array<string, mixed>|Arrayable<string, mixed>  $conditions
+     * @param  array<string, mixed>  $options
      */
-    function morph_model_alias(Model|string $model, bool $strict = true) : string|null
-    {
-        $map = Relation::morphMap();
-        $model = is_object($model)? get_class($model) : $model;
-
-        $index = array_search($model, $map, $strict);
-
-        if($index !== false)
-            return $index;
-
-        if(config('searches.morphs.build_default_aliases')){
-            return Str::kebab(class_basename($model));
-        }
-
-        return null;
-    }
-}
-
-if(!function_exists('eloquent_search')){
-    /**
-     * @param Model|string $from
-     * @param mixed $conditions
-     * @param array $options
-     * @return Searcher
-     */
-    function eloquent_search(Model|string $from, mixed $conditions, array $options = []) : Searcher
+    function eloquent_search(Model|string $from, array|Arrayable $conditions = [], array $options = []): Searcher
     {
         return new Search($from, $conditions, null, $options);
     }
 }
 
-if (! function_exists('warning')) {
+if (! function_exists('morph_model_alias')) {
     /**
-     * Write some information to the log.
+     * Get the alias registered for a model in the morph map.
      *
-     * @param  string  $message
-     * @param  array  $context
-     * @return void
+     * When the model is not mapped and "searches.morphs.build_default_aliases" is enabled,
+     * a kebab-case alias is built from the class name; otherwise null is returned.
+     *
+     * @param  Model|class-string<Model>  $model
      */
-    function warning($message, $context = [])
+    function morph_model_alias(Model|string $model, bool $strict = true): ?string
     {
-        return app('Psr\Log\LoggerInterface')->warning($message, $context);
+        $class = is_object($model) ? get_class($model) : $model;
+
+        $alias = array_search($class, Relation::morphMap(), $strict);
+
+        if ($alias !== false) {
+            return (string) $alias;
+        }
+
+        if (config('searches.morphs.build_default_aliases')) {
+            return Str::kebab(class_basename($class));
+        }
+
+        return null;
     }
 }
-

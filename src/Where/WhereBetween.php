@@ -2,17 +2,12 @@
 
 namespace SlothDevGuy\Searches\Where;
 
-/**
- * Class WhereBetween
- * @package SlothDevGuy\Searches\Where
- */
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
+
 class WhereBetween extends BaseWhere
 {
     use NegatedWhereMethods;
 
-    /**
-     * @var array|string[]
-     */
     protected static array $supportedMethods = [
         'whereBetween',
         'whereNotBetween',
@@ -25,7 +20,7 @@ class WhereBetween extends BaseWhere
     ];
 
     /**
-     * @var array|string[]
+     * @var array<string, string>
      */
     protected static array $negatedMethods = [
         'whereBetween' => 'whereNotBetween',
@@ -38,33 +33,27 @@ class WhereBetween extends BaseWhere
         'orWhereNotBetweenColumns' => 'orWhereBetweenColumns',
     ];
 
-    /**
-     * @return array
-     */
+    public function columns(): array
+    {
+        $columns = parent::columns();
+
+        if (str_contains($this->arguments()->method(), 'Columns')) {
+            $columns = [...$columns, ...array_map('strval', $this->values())];
+        }
+
+        return $columns;
+    }
+
     public function where(): array
     {
         $arguments = $this->arguments();
 
-        //check if we need to change the operator
         $this->negateIfRequired();
-
-        //or the method for the operand
         $this->syncMethodWithOperand();
 
         $field = $this->getQualifiedField($arguments->field());
-        $value = $arguments->value();
+        $values = collect($this->values())->sort()->values()->all();
 
-        //check value type
-        if($response = $this->isValidArray($value)){
-            return $response;
-        }
-
-        $values = collect($value)
-            ->sort()
-            ->values()
-            ->toArray();
-
-        //pack where method and arguments
         return [
             'method' => $arguments->method(),
             'arguments' => compact('field', 'values'),
@@ -72,28 +61,18 @@ class WhereBetween extends BaseWhere
     }
 
     /**
-     * @param mixed $value
-     * @return array|false
+     * @return array{0: mixed, 1: mixed}
+     *
+     * @throws InvalidSearchCondition
      */
-    protected function isValidArray($value)
+    protected function values(): array
     {
-        //check value type
-        if(!is_array($value)){
-            return [
-                'method' => null,
-                'reason' => 'value-not-an-array',
-                'action' => 'skip-where',
-            ];
+        $value = $this->arguments()->value();
+
+        if (! is_array($value) || count($value) !== 2) {
+            throw InvalidSearchCondition::invalidValue('between expects exactly two values');
         }
 
-        if(count($value) !== 2){
-            return [
-                'method' => null,
-                'reason' => 'value-must-have-two-elements',
-                'action' => 'skip-where',
-            ];
-        }
-
-        return false;
+        return array_values($value);
     }
 }

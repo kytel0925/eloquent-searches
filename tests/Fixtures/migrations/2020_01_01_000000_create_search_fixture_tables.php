@@ -108,10 +108,19 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::create('notes', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('category')->nullable();
+            $table->string('secret')->nullable();
+            $table->timestamps();
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('notes');
         Schema::dropIfExists('attachments');
         Schema::dropIfExists('comments');
         Schema::dropIfExists('task_follower');

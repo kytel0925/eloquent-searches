@@ -3,40 +3,34 @@
 namespace SlothDevGuy\Searches;
 
 /**
- * Trait BuilderOptions
- * @package SlothDevGuy\Searches
+ * Read access to an array of options.
  */
 trait BuilderOptions
 {
     /**
-     * @var array
+     * @var array<string, mixed>
      */
     protected array $options = [];
 
-    /**
-     * @param string $key
-     * @param $default
-     * @return array|mixed
-     */
-    public function option(string $key, $default = null)
+    public function option(string $key, mixed $default = null): mixed
     {
-        return data_get($this->options, $key,  $default);
+        return data_get($this->options, $key, $default);
     }
 
     /**
-     * @return array
+     * @return array<string, mixed>
      */
-    public function options() : array
+    public function options(): array
     {
         return $this->options;
     }
 
     /**
-     * @param array $options
-     * @return array
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
      */
     public static function defaultOptions(array $options = []): array
     {
-        return array_merge([], $options);
+        return $options;
     }
 }

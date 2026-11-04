@@ -2,174 +2,188 @@
 
 namespace SlothDevGuy\Searches\Where;
 
+use Illuminate\Database\Eloquent\Builder;
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
 use SlothDevGuy\Searches\SearchBuilder;
 use SlothDevGuy\Searches\Searcher;
+use SlothDevGuy\Searches\Support\SearchGuard;
 use SlothDevGuy\Searches\WhereBuilder;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Class SearchWhereBuilder
- * @package SlothDevGuy\Searches\Where
+ * Translates a "field|arguments" key into a where clause.
+ *
+ * @phpstan-consistent-constructor
  */
 class SearchWhereBuilder implements SearchBuilder
 {
     /**
-     * @var array|WhereBuilder[]
+     * Used when the "searches.wheres" configuration is not available.
+     *
+     * @var array<int, class-string<WhereBuilder>>
      */
-    protected static $supportedWheres = [
+    protected static array $supportedWheres = [
         Where::class,
         WhereNull::class,
         WhereColumn::class,
         WhereIn::class,
         WhereBetween::class,
         WhereFullText::class,
-        //WhereNest::class, //is not necessary it will be redirected by the where strategy
     ];
 
-    /**
-     * @var WhereArguments
-     */
     protected WhereArguments $arguments;
 
-    /**
-     * @var WhereBuilder|null
-     */
     protected ?WhereBuilder $where = null;
 
     /**
-     * @param Searcher $searcher
-     * @param string $fieldWithArguments
-     * @param mixed $values
-     * @param array $options
+     * @param  array<string, mixed>  $options
+     *
+     * @throws InvalidSearchCondition
      */
     protected function __construct(
         protected Searcher $searcher,
-        protected string   $fieldWithArguments,
-        mixed              $values,
-        array              $options = [],
-    )
-    {
+        protected string $fieldWithArguments,
+        mixed $values,
+        array $options = [],
+    ) {
         $this->arguments = new WhereArguments($this->fieldWithArguments, $values, $options);
 
         $this->pickWhereBuilder();
 
-        $this->setValuesInWhere($this->castValuesIfFieldRequires($values));
+        if ($this->where) {
+            $this->guardFields();
+            $this->setValuesInWhere($this->castValuesIfFieldRequires($values));
+        }
     }
 
-    /**
-     * @return Searcher
-     */
     public function searcher(): Searcher
     {
         return $this->searcher;
     }
 
-    public function arguments() : WhereArguments
+    public function arguments(): WhereArguments
     {
         return $this->arguments;
     }
 
-    public function where(): WhereBuilder|null
+    public function where(): ?WhereBuilder
     {
         return $this->where;
     }
 
+    public function pushInQueryBuilder(Builder $builder): Builder
+    {
+        return $this->where ? $this->where->pushInBuilder($builder) : $builder;
+    }
+
     /**
-     * @return $this
+     * Cast the values with the model casts when the "cast" argument is present.
+     *
+     * Returns null when no cast is required.
      */
+    public function castValuesIfFieldRequires(mixed $values): mixed
+    {
+        if (! $this->where) {
+            return null;
+        }
+
+        $arguments = $this->where->arguments();
+        $cast = $arguments->option('cast');
+
+        if (! $cast) {
+            return null;
+        }
+
+        $field = $cast === true ? $arguments->field() : data_get($cast, 0);
+
+        if (! is_string($field)) {
+            throw InvalidSearchCondition::invalidValue('the cast argument requires a single field');
+        }
+
+        $this->guard()->assertSearchable($this->searcher->from(), $field, $this->searcher->option('from_alias'));
+
+        return $this->castValue($field, $values);
+    }
+
+    protected function castValue(string $field, mixed $values): mixed
+    {
+        if (is_array($values)) {
+            return array_map(fn ($value) => $this->castValue($field, $value), $values);
+        }
+
+        if (! is_string($values)) {
+            return $values;
+        }
+
+        $model = $this->searcher->from()->newInstance();
+        $model->setAttribute($field, $values);
+        $castValue = $model->getAttributeValue($field);
+
+        if (is_object($castValue) && method_exists($castValue, 'cast')) {
+            $castValue = $castValue->cast();
+        }
+
+        return $castValue;
+    }
+
     protected function pickWhereBuilder(): static
     {
-        $method = $this->arguments()->method();
+        $method = $this->arguments->method();
 
-        $where = collect(static::$supportedWheres)
-            ->first(fn($whereBuilder) => /** @var WhereBuilder $whereBuilder */ $whereBuilder::supportsMethod($method));
+        $where = collect(static::supportedWheres())
+            ->first(fn (string $whereBuilder) => $whereBuilder::supportsMethod($method));
 
-        if($where){
-            $this->where = new $where($this);
-
-            //maybe to selected where method has to redirect to another where class
-            $this->where = $this->where()->redirect();
+        if ($where) {
+            // the selected where can redirect to a better suited one (for example where -> whereIn)
+            $this->where = (new $where($this))->redirect();
         }
 
         return $this;
     }
 
     /**
-     * @param Builder $builder
-     * @return Builder
+     * Make sure every column referenced by the where can be searched.
+     *
+     * @throws InvalidSearchCondition
      */
-    public function pushInQueryBuilder(Builder $builder): Builder
+    protected function guardFields(): void
     {
-        if (!$this->where()) {
-            return $builder;
-        }
+        $from = $this->searcher->from();
+        $alias = $this->searcher->option('from_alias');
 
-        return $this->where()->pushInBuilder($builder);
+        foreach ($this->where->columns() as $column) {
+            $this->guard()->assertSearchable($from, $column, $alias);
+        }
     }
 
-    /**
-     * @param mixed $values
-     * @return mixed
-     */
-    public function castValuesIfFieldRequires(mixed $values): mixed
-    {
-        if(!isset($this->where)){
-            return null;
-        }
-
-        $arguments = $this->where->arguments();
-        if(!$arguments->option('cast')){
-            return null;
-        }
-
-        $field = $arguments->option('cast') === true? $arguments->field() : $arguments->option('cast.0');
-        $from = $this->searcher()->from();
-        $model = new $from;
-
-        if(is_string($values)){
-            $model->setAttribute($field, $values);
-            $castValue = $model->getAttributeValue($field);
-
-            if(is_object($castValue) && method_exists($castValue, 'cast')){
-                $castValue = $castValue->cast();
-            }
-
-            return $castValue;
-        }
-
-        if(is_array($values)){
-            return array_map(fn($value) => $this->castValuesIfFieldRequires($value), $values);
-        }
-
-        return $values;
-    }
-
-    /**
-     * @param mixed $values
-     * @return void
-     */
     protected function setValuesInWhere(mixed $values): void
     {
-        if(!is_null($values) && isset($this->where)){
+        if (! is_null($values) && $this->where) {
             $this->where->arguments()->value($values);
         }
     }
 
+    protected function guard(): SearchGuard
+    {
+        return app(SearchGuard::class);
+    }
+
     /**
-     * @param Searcher $search
-     * @param string $key
-     * @param mixed $value
-     * @param array $options
-     * @return SearchBuilder|null
+     * @return array<int, class-string<WhereBuilder>>
      */
-    public static function buildFromKeyAndValue(Searcher $search, string $key, $value, array $options = []): SearchBuilder|null
+    public static function supportedWheres(): array
+    {
+        return config('searches.wheres') ?: static::$supportedWheres;
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     *
+     * @throws InvalidSearchCondition
+     */
+    public static function buildFromKeyAndValue(Searcher $search, string $key, mixed $value, array $options = []): ?SearchBuilder
     {
         $builder = new static($search, $key, $value, $options);
 
-        if (!$builder->where()) {
-            return null;
-        }
-
-        return $builder;
+        return $builder->where() ? $builder : null;
     }
 }

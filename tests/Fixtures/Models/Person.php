@@ -10,6 +10,33 @@ class Person extends Model
 {
     protected $table = 'persons';
 
+    protected $guarded = [];
+
+    /**
+     * Records the calls to methods that must never be invoked by a search.
+     *
+     * @var array<int, string>
+     */
+    public static array $calls = [];
+
+    /**
+     * A public method without parameters that is not a relationship.
+     */
+    public function archive()
+    {
+        static::$calls[] = 'archive';
+
+        return $this;
+    }
+
+    /**
+     * A relationship without a return type: only joinable through an allow list.
+     */
+    public function legacyTasks()
+    {
+        return $this->hasMany(Task::class, 'owner_id');
+    }
+
     public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);

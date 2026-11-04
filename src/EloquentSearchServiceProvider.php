@@ -2,24 +2,26 @@
 
 namespace SlothDevGuy\Searches;
 
-use Illuminate\Support\ServiceProvider as BaseServiceProvider;
-use SlothDevGuy\Searches\Http\Requests\SearchRequest;
+use Illuminate\Support\ServiceProvider;
+use SlothDevGuy\Searches\Support\SearchGuard;
 
-class EloquentSearchServiceProvider extends BaseServiceProvider
+class EloquentSearchServiceProvider extends ServiceProvider
 {
-    /**
-     * @return void
-     */
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__.'/../config/searches.php', 'searches');
+
+        $this->app->singleton(SearchGuard::class, fn ($app) => new SearchGuard(
+            strict: (bool) $app['config']->get('searches.strict', false),
+        ));
+    }
+
     public function boot(): void
     {
-        $this->app->resolving(
-            SearchRequest::class,
-            fn($request, $app) => $request::createFrom($app['request'], $request)
-        );
-
-        $this->app->afterResolving(
-            SearchRequest::class,
-            fn(SearchRequest $request) => $request->validate()
-        );
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../config/searches.php' => config_path('searches.php'),
+            ], 'searches-config');
+        }
     }
 }

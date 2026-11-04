@@ -3,97 +3,70 @@
 namespace SlothDevGuy\Searches;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Interface Searcher
- * @package SlothDevGuy\Searches
+ * Translates a set of array conditions into an Eloquent query.
  */
 interface Searcher
 {
     /**
-     * @return Model
+     * The model the search starts from.
      */
-    public function from() : Model;
+    public function from(): Model;
 
     /**
-     * @param $select
-     * @return mixed
-     */
-    public function select($select = null);
-
-    /**
-     * @param bool $distinct
-     * @return mixed
-     */
-    public function distinct(bool $distinct = null) : bool;
-
-    /**
-     * Returns a Collection with the results
+     * Get (or set) the selected columns.
      *
-     * @return mixed
+     * @param  array<int, string>|string|null  $select
+     * @return array<int, string>|string
      */
-    public function get();
+    public function select(array|string|null $select = null): array|string;
 
     /**
-     * @param int $max
-     * @param callable $closure
-     * @return mixed
+     * Get (or set) the distinct flag.
      */
-    //public function chuck(int $max, callable $closure);
+    public function distinct(?bool $distinct = null): bool;
 
     /**
-     * @param bool $reCount
-     * @return int
-     */
-    public function count(bool $reCount = false) : int;
-
-    /**
-     * @return array
-     */
-    public function pagination() : array;
-
-    /**
-     * @return Builder
-     */
-    public function builder() : Builder;
-
-    /**
-     * Returns the last used builder for the get method
+     * Run the search and return the (paginated) results.
      *
-     * @return Builder
+     * @return Collection<int, Model>
+     */
+    public function get(): Collection;
+
+    /**
+     * Count every result of the search, ignoring the pagination.
+     */
+    public function count(bool $reCount = false): int;
+
+    /**
+     * Get the pagination state: page, pages, max and total.
+     *
+     * @return array{page: int|null, pages: int|null, max: int|null, total: int|null}
+     */
+    public function pagination(): array;
+
+    /**
+     * Get the query builder with every condition (joins and wheres) applied.
+     */
+    public function builder(): Builder;
+
+    /**
+     * Get the builder used by the last get() call, before pagination was applied.
      */
     public function getLastBuilder(): Builder;
 
     /**
-     * @param string $field
-     * @return string
+     * Qualify a field with the table (or alias) of the model the search starts from.
      */
-    public function getFromQualifiedField(string $field) : string;
+    public function getFromQualifiedField(string $field): string;
+
+    public function option(string $key, mixed $default = null): mixed;
 
     /**
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
+     * @return array<string, mixed>
      */
-    public function option(string $key, $default = null);
-
-    /**
-     * @return array
-     */
-    public function options() : array;
-
-    /**
-     * @param array $options
-     * @return array
-     */
-    public static function defaultOptions(array $options = []) : array;
-
-    /**
-     * @param string $field
-     * @param string $table
-     * @param string|null $alias
-     * @return string
-     */
-    public static function getQualifiedField(string $field, string $table, string $alias = null) : string;
+    public function options(): array;
 }

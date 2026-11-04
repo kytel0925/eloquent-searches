@@ -2,80 +2,76 @@
 
 namespace SlothDevGuy\Searches\Where;
 
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
+
 /**
- * Class WhereNest
- * @package SlothDevGuy\Searches\Where
+ * Group conditions inside parentheses: ['group|nest|or' => ['name' => 'foo', 'last_name' => 'bar']].
  */
 class WhereNest extends BaseWhere
 {
-    /**
-     * @var array|string[]
-     */
     protected static array $supportedMethods = ['where', 'orWhere'];
 
     /**
-     * @var array|string[]
+     * @var array<string, string>
      */
     protected static array $negatedMethods = [
         'where' => 'whereNot',
         'orWhere' => 'orWhereNot',
     ];
 
-    /**
-     * @var null
-     */
-    protected $negatedMethod = null;
+    protected ?string $negatedMethod = null;
 
     /**
-     * @return static
+     * The nested conditions are checked by the nested search.
      */
-    protected function negateIfRequired()
+    public function columns(): array
+    {
+        return [];
+    }
+
+    protected function negateIfRequired(): static
     {
         $arguments = $this->arguments();
 
-        if($arguments->not()) {
-            $this->negatedMethod = static::$negatedMethods[$arguments->method()];
+        if ($arguments->not()) {
+            $this->negatedMethod = static::$negatedMethods[$arguments->method()] ?? null;
         }
 
         return $this;
     }
 
-    /**
-     * @return array
-     */
     public function where(): array
     {
-        $method = $this->arguments()->method();
-
+        $this->syncMethodWithOperand();
         $this->negateIfRequired();
 
-        $nestCallback = function ($query){
-            $values = $this->arguments()->value();
+        $method = $this->arguments()->method();
+        $values = $this->arguments()->value();
 
+        if (! is_array($values)) {
+            throw InvalidSearchCondition::invalidValue('nested conditions must be an array');
+        }
+
+        $nestCallback = function ($query) use ($values) {
             $searcher = $this->searchBuilder()->searcher();
 
-            $searcher = new $searcher($searcher->from(), $values, $query, $searcher->options());
+            $nested = new $searcher($searcher->from(), $values, $query, [
+                'from_alias' => $searcher->option('from_alias'),
+                'qualified_fields' => $searcher->option('qualified_fields', true),
+            ]);
 
-            $query->setQuery($builder = $searcher->builder()->getQuery());
+            $query->setQuery($nested->builder()->getQuery());
 
-            return $builder;
+            return $query;
         };
 
-        //if a negated method is present a closure must be offered
-        if($this->negatedMethod){
-            $negatedNestCallback = function ($query) use($method, $nestCallback) {
-                $query->{$method}($nestCallback);
-
-                return $query;
-            };
-
+        if ($this->negatedMethod) {
             return [
                 'method' => $this->negatedMethod,
-                'arguments' => [$negatedNestCallback],
+                'arguments' => [fn ($query) => $query->where($nestCallback)],
             ];
         }
 
-        //pack where method and arguments
         return [
             'method' => $method,
             'arguments' => [$nestCallback],

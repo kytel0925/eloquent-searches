@@ -3,20 +3,16 @@
 namespace SlothDevGuy\Searches\Where;
 
 /**
- * Trait NegatedWhereMethods
- * @package SlothDevGuy\Searches\Where
+ * Negate a where by swapping its method (whereIn -> whereNotIn) using static::$negatedMethods.
  */
 trait NegatedWhereMethods
 {
-    /**
-     * @return static
-     */
-    protected function negateIfRequired()
+    protected function negateIfRequired(): static
     {
         $arguments = $this->arguments();
 
-        if($arguments->not()) {
-            $arguments->method(static::$negatedMethods[$arguments->method()]);
+        if ($arguments->not()) {
+            $arguments->method(static::$negatedMethods[$arguments->method()] ?? $arguments->method());
         }
 
         return $this;

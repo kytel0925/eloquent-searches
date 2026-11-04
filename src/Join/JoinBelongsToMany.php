@@ -7,33 +7,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Class JoinBelongsToMany
- * @package SlothDevGuy\Searches\Join
+ * Joins a belongs-to-many relationship through its pivot table.
  */
 class JoinBelongsToMany extends JoinRelationship
 {
-    /**
-     * @param Model $from
-     * @param BelongsToMany $relationship
-     * @param array $options
-     */
     public function __construct(
         protected Model $from,
         protected BelongsToMany $relationship,
         array $options = [],
-    )
-    {
+    ) {
         $this->options = static::defaultOptions($options);
     }
 
     /**
      * @return array[]
      */
-    public function joins() : array
+    public function joins(): array
     {
         return [
             $this->pivotJoin(),
-            $this->baseJoin()
+            $this->baseJoin(),
         ];
     }
 
@@ -42,17 +35,14 @@ class JoinBelongsToMany extends JoinRelationship
      */
     public function pivotJoin()
     {
-        //@todo rename table key for join_context, and arguments for join_arguments
+        // @todo rename table key for join_context, and arguments for join_arguments
         return [
             'table' => $this->getPivotJoinContext(),
             'arguments' => array_values($this->onPivot()),
         ];
     }
 
-    /**
-     * @return array
-     */
-    public function onPivot() : array
+    public function onPivot(): array
     {
         $relationship = $this->relationship;
 
@@ -63,9 +53,6 @@ class JoinBelongsToMany extends JoinRelationship
         return compact('first', 'operator', 'second');
     }
 
-    /**
-     * @return array
-     */
     public function on(): array
     {
         $relationship = $this->relationship;
@@ -77,10 +64,7 @@ class JoinBelongsToMany extends JoinRelationship
         return compact('first', 'operator', 'second');
     }
 
-    /**
-     * @return string
-     */
-    public function getPivotJoinContext() : string
+    public function getPivotJoinContext(): string
     {
         $pivotTable = $this->relationship->getTable();
         $fromAlias = $this->option('from_table_alias');
@@ -88,16 +72,12 @@ class JoinBelongsToMany extends JoinRelationship
 
         $context = collect([$fromAlias, $toAlias])->filter();
 
-        return $context->count() > 0?
+        return $context->count() > 0 ?
             "{$pivotTable} as {$pivotTable}_{$context->implode('_')}" :
             $pivotTable;
     }
 
-    /**
-     * @param string $field
-     * @return string
-     */
-    public function getPivotTableQualifiedField(string $field) : string
+    public function getPivotTableQualifiedField(string $field): string
     {
         $pivotTable = $this->relationship->getTable();
         $fromAlias = $this->option('from_table_alias');
@@ -108,10 +88,6 @@ class JoinBelongsToMany extends JoinRelationship
         return static::getQualifiedField($field, $pivotTable, $context);
     }
 
-    /**
-     * @param Relation $relationship
-     * @return bool
-     */
     public static function instanceOf(Relation $relationship): bool
     {
         return $relationship instanceof BelongsToMany;
