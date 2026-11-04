@@ -31,6 +31,7 @@ Person::search([
 * [Configuration](#configuration)
 * [Extending](#extending)
 * [Upgrading](#upgrading)
+* [Contributing](#contributing)
 
 ## Requirements
 
@@ -335,6 +336,6 @@ The messages are safe to show to API clients.
 
 See [CHANGELOG.md](CHANGELOG.md) for the breaking changes of each release.
 
-## License
+## Contributing
 
-MIT, see [LICENSE.md](LICENSE.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). The project is released under the [MIT license](LICENSE.md).
