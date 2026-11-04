@@ -10,7 +10,7 @@ class WhereNestTest extends TestCase
 {
     use MockSearcher, WhereBuilderAssertions;
 
-    public function testNest()
+    public function test_nest()
     {
         $field = 'foo_key';
         $values = [
@@ -30,12 +30,12 @@ class WhereNestTest extends TestCase
             'where_instance_of' => WhereNest::class,
             'method' => 'where',
             'arguments' => [
-                function(){ },
-            ]
+                function () {},
+            ],
         ]);
     }
 
-    public function testNotNest()
+    public function test_not_nest()
     {
         $field = 'foo_key';
         $values = [
@@ -55,8 +55,8 @@ class WhereNestTest extends TestCase
             'where_instance_of' => WhereNest::class,
             'method' => 'whereNot',
             'arguments' => [
-                function(){ },
-            ]
+                function () {},
+            ],
         ]);
     }
 }

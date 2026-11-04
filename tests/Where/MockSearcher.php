@@ -7,24 +7,19 @@ use SlothDevGuy\Searches\Searcher;
 
 /**
  * Trait MockSearcher
- * @package Tests\Where
  */
 trait MockSearcher
 {
-    /**
-     * @param array $builders
-     * @return Searcher
-     */
-    protected function mockSearcher(array $builders = []) : Searcher
+    protected function mockSearcher(array $builders = []): Searcher
     {
         $builders = array_merge([
             'get_from_qualified_field' => $this->mockGetFromQualifiedField(),
         ], $builders);
         $builders = array_filter($builders);
 
-        $searcher = $this->createMock(Searcher::class);
+        $searcher = $builders ? $this->createMock(Searcher::class) : $this->createStub(Searcher::class);
 
-        foreach ($builders as $builder){
+        foreach ($builders as $builder) {
             $searcher = call_user_func_array($builder, [$searcher]);
         }
 
@@ -33,10 +28,10 @@ trait MockSearcher
 
     protected function mockGetFromQualifiedField()
     {
-        return function (MockObject $searcher){
+        return function (MockObject $searcher) {
             $searcher->expects($this->atLeastOnce())
                 ->method('getFromQualifiedField')
-                ->will($this->returnCallback(fn($field) => "test.{$field}"));
+                ->willReturnCallback(fn ($field) => "test.{$field}");
 
             return $searcher;
         };

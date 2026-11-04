@@ -4,21 +4,19 @@ namespace Tests\Joins;
 
 use SlothDevGuy\Searches\Join\JoinBelongsTo;
 use SlothDevGuy\Searches\Join\SearchJoinRelationshipBuilder;
-use Tests\database\Address;
-use Tests\database\Location;
+use Tests\Fixtures\Models\Address;
+use Tests\Fixtures\Models\Location;
 use Tests\TestCase;
 
 /**
  * Class BelongsToTest
- * @package Tests\Joins
  */
 class BelongsToTest extends TestCase
 {
-    use MockSearcher, JoinBuilderAssertions;
+    use JoinBuilderAssertions, MockSearcher;
 
-    public function testJoins()
+    public function test_joins()
     {
-        $this->loadTestModels();
 
         $joinData = [
             'values' => [],
@@ -26,22 +24,22 @@ class BelongsToTest extends TestCase
             'table' => 'location',
             'relation' => 'location',
             'foreign_key' => 'location_id',
-            'aliases' => [null, 'foo', 'bar']
+            'aliases' => [null, 'foo', 'bar'],
         ];
 
         $joinTypes = [null, 'join', 'left-join'];
 
         $from = [
-            'model' => $model = new Address(),
+            'model' => $model = new Address,
             'table' => $model->getTable(),
         ];
 
-        foreach ($joinTypes as $index => $joinType){
+        foreach ($joinTypes as $index => $joinType) {
             $alias = data_get($joinData, "aliases.{$index}");
 
             $join = collect([
-                $joinData['relation'] . ($alias? "@$alias" : ''),
-                $joinType
+                $joinData['relation'].($alias ? "@$alias" : ''),
+                $joinType,
             ])->filter()->implode('|');
 
             /** @var SearchJoinRelationshipBuilder $joinBuilder */
@@ -49,23 +47,23 @@ class BelongsToTest extends TestCase
 
             $this->assertNotNull($joinBuilder);
 
-            $join = $alias? "{$joinData['table']} as {$alias}" : $joinData['table'];
-            $joinContext = $alias? : $joinData['table'];
+            $join = $alias ? "{$joinData['table']} as {$alias}" : $joinData['table'];
+            $joinContext = $alias ?: $joinData['table'];
 
             $this->assertJoinBuilder($joinBuilder, [
                 'join_instance_of' => JoinBelongsTo::class,
                 'related_instance_of' => $joinData['model'],
-                'method' => $joinType? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
+                'method' => $joinType ? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
                 'arguments' => [
                     [
                         'table' => $join,
                         'arguments' => [
                             "{$joinContext}.id",
                             '=',
-                            "{$from['table']}.{$joinData['foreign_key']}"
+                            "{$from['table']}.{$joinData['foreign_key']}",
                         ],
                     ],
-                ]
+                ],
             ]);
         }
     }

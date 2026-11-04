@@ -5,24 +5,22 @@ namespace Tests\Where;
 use SlothDevGuy\Searches\Where\SearchWhereBuilder;
 use SlothDevGuy\Searches\Where\WhereIn;
 use Tests\TestCase;
-use Tests\WithDB;
 
 /**
  * Class WhereInTest
- * @package Tests\Where
  */
 class WhereInTest extends TestCase
 {
     use MockSearcher, WhereBuilderAssertions;
 
-    public function testIn()
+    public function test_in()
     {
         $field = 'foo';
         $values = ['bar', 'some', 'data'];
 
         $aliases = [null, 'in', 'where-in'];
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $key = implode('|', array_filter([$field, $alias]));
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -36,12 +34,12 @@ class WhereInTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $values,
-                ]
+                ],
             ]);
         }
     }
 
-    public function testNotIn()
+    public function test_not_in()
     {
         $field = 'foo';
         $values = ['bar', 'some', 'data'];
@@ -50,7 +48,7 @@ class WhereInTest extends TestCase
 
         $negations = collect(['not', '!']);
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $not = $negations->random();
             $key = implode('|', array_filter([$field, $not, $alias]));
 
@@ -65,7 +63,7 @@ class WhereInTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $values,
-                ]
+                ],
             ]);
         }
     }

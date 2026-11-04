@@ -8,16 +8,10 @@ use SlothDevGuy\Searches\Searcher;
 
 /**
  * Trait MockSearcher
- * @package Tests\Where
  */
 trait MockSearcher
 {
-    /**
-     * @param array $options
-     * @param array $builders
-     * @return Searcher
-     */
-    protected function mockSearcher(array $options, array $builders = []) : Searcher
+    protected function mockSearcher(array $options, array $builders = []): Searcher
     {
         /** @var Model $from */
         $from = data_get($options, 'model');
@@ -31,7 +25,7 @@ trait MockSearcher
 
         $searcher = $this->createMock(Searcher::class);
 
-        foreach ($builders as $builder){
+        foreach ($builders as $builder) {
             $searcher = call_user_func_array($builder, [$searcher]);
         }
 
@@ -40,10 +34,10 @@ trait MockSearcher
 
     protected function mockGetFromQualifiedField(string $table)
     {
-        return function (MockObject $searcher) use($table){
+        return function (MockObject $searcher) use ($table) {
             $searcher->expects($this->any())
                 ->method('getFromQualifiedField')
-                ->will($this->returnCallback(fn($field) => "{$table}.{$field}"));
+                ->willReturnCallback(fn ($field) => "{$table}.{$field}");
 
             return $searcher;
         };
@@ -51,10 +45,10 @@ trait MockSearcher
 
     protected function mockFrom(Model $from)
     {
-        return function (MockObject $searcher) use($from) {
+        return function (MockObject $searcher) use ($from) {
             $searcher->expects($this->atLeastOnce())
                 ->method('from')
-                ->will($this->returnCallback(fn() => $from));
+                ->willReturnCallback(fn () => $from);
 
             return $searcher;
         };

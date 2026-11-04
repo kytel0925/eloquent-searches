@@ -1,8 +1,10 @@
-/storage/*.key
-/vendor
 .env
-.env.backup
 .phpunit.result.cache
-docker-compose.override.yml
 /.idea
+/.phpunit.cache
 /.vscode
+/build
+/composer.lock
+/phpunit.xml
+/vendor
+docker-compose.override.yml

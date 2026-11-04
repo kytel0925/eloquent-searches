@@ -10,7 +10,7 @@ class WhereNullTest extends TestCase
 {
     use MockSearcher, WhereBuilderAssertions;
 
-    public function testNull()
+    public function test_null()
     {
         $field = 'foo';
         $key = "{$field}|null";
@@ -25,11 +25,11 @@ class WhereNullTest extends TestCase
             'method' => 'whereNull',
             'arguments' => [
                 "test.{$field}",
-            ]
+            ],
         ]);
     }
 
-    public function testNotNull()
+    public function test_not_null()
     {
         $field = 'foo';
         $key = "{$field}|!|null";
@@ -44,7 +44,7 @@ class WhereNullTest extends TestCase
             'method' => 'whereNotNull',
             'arguments' => [
                 "test.{$field}",
-            ]
+            ],
         ]);
     }
 }

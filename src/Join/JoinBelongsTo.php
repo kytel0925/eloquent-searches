@@ -7,22 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Class BelongsToAdapter
- * @package SlothDevGuy\Searches\Join
+ * Joins a belongs-to relationship.
  */
 class JoinBelongsTo extends JoinRelationship
 {
-    /**
-     * @param Model $from
-     * @param BelongsTo $relationship
-     * @param array $options
-     */
     public function __construct(
-        protected  Model     $from,
-        protected  BelongsTo $relationship,
-        array      $options = [],
-    )
-    {
+        protected Model $from,
+        protected BelongsTo $relationship,
+        array $options = [],
+    ) {
         $this->options = static::defaultOptions($options);
     }
 
@@ -37,11 +30,7 @@ class JoinBelongsTo extends JoinRelationship
         return compact('first', 'operator', 'second');
     }
 
-    /**
-     * @param Relation $relationship
-     * @return bool
-     */
-    public static function instanceOf(Relation $relationship) : bool
+    public static function instanceOf(Relation $relationship): bool
     {
         return $relationship instanceof BelongsTo;
     }

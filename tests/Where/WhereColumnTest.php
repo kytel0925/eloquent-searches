@@ -10,14 +10,14 @@ class WhereColumnTest extends TestCase
 {
     use MockSearcher, WhereBuilderAssertions;
 
-    public function testWhere()
+    public function test_where()
     {
         $field = 'foo';
         $value = 'bar';
 
         $aliases = ['column', 'where-column'];
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $key = implode('|', array_filter([$field, $alias]));
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -31,8 +31,8 @@ class WhereColumnTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     '=',
-                    $value,
-                ]
+                    "test.{$value}",
+                ],
             ]);
         }
     }
@@ -40,14 +40,14 @@ class WhereColumnTest extends TestCase
     /**
      * @return void
      */
-    public function testOperators()
+    public function test_operators()
     {
         $operators = ['=', '<>', '>', '>=', '<', '<='];
         $field = 'foo';
         $value = 'bar';
         $aliases = collect(['column', 'where-column']);
 
-        foreach ($operators as $operator){
+        foreach ($operators as $operator) {
             $key = "$field|{$aliases->random()}|$operator";
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -61,8 +61,8 @@ class WhereColumnTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $operator,
-                    $value
-                ]
+                    "test.{$value}",
+                ],
             ]);
         }
     }
@@ -70,7 +70,7 @@ class WhereColumnTest extends TestCase
     /**
      * @return void
      */
-    public function testNegation()
+    public function test_negation()
     {
         $negatedOperators = [
             '=' => '<>',
@@ -86,7 +86,7 @@ class WhereColumnTest extends TestCase
         $not = collect(['not', '!']);
         $aliases = collect(['column', 'where-column']);
 
-        foreach ($negatedOperators as $operator => $negatedOperator){
+        foreach ($negatedOperators as $operator => $negatedOperator) {
             $key = "$field|{$aliases->random()}|{$not->random()}|$operator";
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -100,8 +100,8 @@ class WhereColumnTest extends TestCase
                 'arguments' => [
                     "test.{$field}",
                     $negatedOperator,
-                    $value
-                ]
+                    "test.{$value}",
+                ],
             ]);
         }
     }

@@ -2,50 +2,35 @@
 
 namespace SlothDevGuy\Searches\ResponseModels;
 
+use JsonSerializable;
 use SlothDevGuy\Searches\Interfaces\ItemResponseSchemaInterface;
 use SlothDevGuy\Searches\Interfaces\SearchResponseSchemaInterface;
 use SlothDevGuy\Searches\Searcher;
 
 /**
- * Class SearchResponse
- * @package SlothDevGuy\Searches\ResponseModels
+ * Maps the search results, with pagination data when the search is paginated.
+ *
+ * @phpstan-consistent-constructor
  */
-class SearchResponseSchema implements SearchResponseSchemaInterface
+class SearchResponseSchema implements JsonSerializable, SearchResponseSchemaInterface
 {
-    /**
-     * @var bool
-     */
     protected bool $forcePagination = false;
 
     /**
-     * @var array
+     * @var array<int, mixed>|null
      */
-    protected array $map = [];
+    protected ?array $map = null;
 
-    /**
-     * @param Searcher $search
-     * @param ItemResponseSchemaInterface $itemResponse
-     */
     public function __construct(
         protected Searcher $search,
         protected ItemResponseSchemaInterface $itemResponse
-    )
-    {
+    ) {}
 
-    }
-
-    /**
-     * @return Searcher
-     */
     public function search(): Searcher
     {
         return $this->search;
     }
 
-    /**
-     * @param bool $force
-     * @return SearchResponseSchemaInterface
-     */
     public function forcePaginationResponse(bool $force = true): SearchResponseSchemaInterface
     {
         $this->forcePagination = $force;
@@ -53,31 +38,22 @@ class SearchResponseSchema implements SearchResponseSchemaInterface
         return $this;
     }
 
-    /**
-     * @param ItemResponseSchemaInterface $itemResponse
-     * @return SearchResponseSchemaInterface
-     */
     public function setItemResponse(ItemResponseSchemaInterface $itemResponse): SearchResponseSchemaInterface
     {
         $this->itemResponse = $itemResponse;
+        $this->map = null;
 
         return $this;
     }
 
-    /**
-     * @return array
-     */
-    public function toArray()
+    public function toArray(): array
     {
-        return $this->withPagination()?
+        return $this->withPagination() ?
             $this->mapWithPagination() :
             $this->map();
     }
 
-    /**
-     * @return bool
-     */
-    protected function withPagination() : bool
+    protected function withPagination(): bool
     {
         $pagination = $this->search()->pagination();
         $page = data_get($pagination, 'page');
@@ -86,24 +62,18 @@ class SearchResponseSchema implements SearchResponseSchemaInterface
         return ($page > 0 && $max > 0) || $this->forcePagination;
     }
 
-    /**
-     * @return array
-     */
-    public function map(callable $mapper = null): array
+    public function map(?callable $mapper = null): array
     {
-        if(empty($this->map)){
-            $this->map = collect($this->search()->get())
-                ->map($mapper? : $this->itemResponse::mapEach())
-                ->toArray();
+        if ($mapper) {
+            return $this->search()->get()->map($mapper)->toArray();
         }
 
-        return $this->map;
+        return $this->map ??= $this->search()->get()
+            ->map($this->itemResponse::mapEach())
+            ->toArray();
     }
 
-    /**
-     * @return array
-     */
-    protected function mapWithPagination() : array
+    protected function mapWithPagination(): array
     {
         $mapWithPagination = [];
         $itemKey = config('searches.responses.pagination_keys.items', 'items');
@@ -111,31 +81,34 @@ class SearchResponseSchema implements SearchResponseSchemaInterface
 
         $this->search()->count();
         $pagination = $this->search()->pagination();
-        foreach ($pagination as $key => $value){
+        foreach ($pagination as $key => $value) {
             $newKey = config("searches.responses.pagination_keys.{$key}", $key);
-            //all pagination values should be integer values
+            // all pagination values are integers
             $mapWithPagination[$newKey] = (int) $value;
         }
-
 
         return $mapWithPagination;
     }
 
     /**
-     * @param int $options
+     * @param  int  $options
      * @return false|string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): string
     {
-        return json_encode($this->toArray(), $options);
+        return (string) json_encode($this->toArray(), $options);
     }
 
     /**
-     * @param Searcher $search
-     * @return SearchResponseSchemaInterface
+     * @return array<array-key, mixed>
      */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
+    }
+
     public static function fromSearch(Searcher $search): SearchResponseSchemaInterface
     {
-        return new static($search, new ItemResponseSchema());
+        return new static($search, new ItemResponseSchema);
     }
 }

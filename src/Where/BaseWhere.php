@@ -2,144 +2,102 @@
 
 namespace SlothDevGuy\Searches\Where;
 
-use SlothDevGuy\Searches\WhereBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use SlothDevGuy\Searches\WhereBuilder;
 
-/**
- * Class BaseWhere
- * @package SlothDevGuy\Searches\Where
- */
 abstract class BaseWhere implements WhereBuilder
 {
     /**
-     * @var array
+     * The query builder methods handled by this class.
+     *
+     * @var array<int, string>
      */
     protected static array $supportedMethods = [];
 
-    /**
-     * @param SearchWhereBuilder $search
-     */
     public function __construct(
-        protected SearchWhereBuilder $search
-    )
-    {
+        protected SearchWhereBuilder $search,
+    ) {}
 
-    }
-
-    /**
-     * @return BaseWhere
-     */
-    public function redirect() : BaseWhere
+    public function redirect(): WhereBuilder
     {
         return $this;
     }
 
-    /**
-     * @return SearchWhereBuilder
-     */
-    public function searchBuilder() : SearchWhereBuilder
+    public function searchBuilder(): SearchWhereBuilder
     {
         return $this->search;
     }
 
-    /**
-     * @return Model
-     */
     public function from(): Model
     {
-        return $this->searchBuilder()
-            ->searcher()
-            ->from();
+        return $this->searchBuilder()->searcher()->from();
     }
 
-    /**
-     * @param string $field
-     * @return string
-     */
     public function getQualifiedField(string $field): string
     {
-        return $this->searchBuilder()
-            ->searcher()
-            ->getFromQualifiedField($field);
+        return $this->searchBuilder()->searcher()->getFromQualifiedField($field);
     }
 
-    /**
-     * @return WhereArguments
-     */
+    public function columns(): array
+    {
+        return (array) $this->arguments()->field();
+    }
+
     public function arguments(): WhereArguments
     {
         return $this->searchBuilder()->arguments();
     }
 
-    /**
-     * @param string $key
-     * @param $default
-     * @return array|mixed
-     */
-    public function option(string $key, $default = null)
+    public function option(string $key, mixed $default = null): mixed
     {
         return $this->arguments()->option($key, $default);
     }
 
-    /**
-     * @param Builder $builder
-     * @return Builder
-     */
     public function pushInBuilder(Builder $builder): Builder
     {
         $where = $this->where();
 
-        $method = $where['method'];
-
-        if(!$method){
-            $class = class_basename($this);
-
-            Log::warning("$class, invalid-method", $where);
-
+        // a null method means the condition must be skipped (for example an empty full text search)
+        if (! $where['method']) {
             return $builder;
         }
 
-        $arguments = array_values($where['arguments']);
-
-        $builder->{$method}(...$arguments);
+        $builder->{$where['method']}(...array_values($where['arguments'] ?? []));
 
         return $builder;
     }
 
     /**
-     * @return $this
+     * Switch between the "and" and "or" variant of the method according to the operand.
      */
-    protected function syncMethodWithOperand() : static
+    protected function syncMethodWithOperand(): static
     {
         $arguments = $this->arguments();
+        $method = $arguments->method();
 
-        //check if we need to change the method related to the operand
-        if($arguments->operand() === 'or' && !Str::startsWith($arguments->method(), 'or')){
-            //only add the or at the begging and capitalize the first letter witch will be the where
-            $arguments->method('or' . ucfirst($arguments->method()));
-        }
-        elseif($arguments->operand() === 'and' && Str::startsWith($arguments->method(), 'or')){
-            //only add the or at the begging and capitalize the first letter witch will be the where
-            $arguments->method(str_replace('orW', 'w', $arguments->method()));
+        if ($arguments->operand() === 'or' && ! Str::startsWith($method, 'or')) {
+            $arguments->method('or'.ucfirst($method));
+        } elseif ($arguments->operand() === 'and' && Str::startsWith($method, 'or')) {
+            $arguments->method(lcfirst(substr($method, 2)));
         }
 
         return $this;
     }
 
     /**
-     * @return static
+     * @return array{method: null, reason: string}
      */
-    abstract protected function negateIfRequired();
+    protected static function skip(string $reason): array
+    {
+        return ['method' => null, 'reason' => $reason];
+    }
 
-    /**
-     * @param string $method
-     * @return bool
-     */
+    abstract protected function negateIfRequired(): static;
+
     public static function supportsMethod(string $method): bool
     {
-        return in_array($method, static::$supportedMethods);
+        return in_array($method, static::$supportedMethods, true);
     }
 }

@@ -7,72 +7,36 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Interface JoinBuilderAdapter
- * @package SlothDevGuy\Searches
+ * Joins the table of a relationship (and its pivot table, when there is one).
  */
 interface JoinRelationshipBuilder
 {
-    /**
-     * @return Model
-     */
-    public function from() : Model;
+    public function from(): Model;
+
+    public function getFromTableQualifiedField(string $field): string;
+
+    public function to(): Model;
+
+    public function getToTableQualifiedField(string $field): string;
+
+    public function joins(): array;
+
+    public function on(): array;
+
+    public function wheres(): array;
 
     /**
-     * @param string $field
-     * @return string
-     */
-    public function getFromTableQualifiedField(string $field) : string;
-
-    /**
-     * @return Model
-     */
-    public function to() : Model;
-
-    /**
-     * @param string $field
-     * @return string
-     */
-    public function getToTableQualifiedField(string $field) : string;
-
-    /**
-     * @return array
-     */
-    public function joins() : array;
-
-    /**
-     * @return array
-     */
-    public function on() : array;
-
-    /**
-     * @return array
-     */
-    public function wheres() : array;
-
-    /**
-     * @param string $key
-     * @param mixed $default
+     * @param  mixed  $default
      * @return mixed
      */
     public function option(string $key, $default = null);
 
-    /**
-     * @param Builder $builder
-     * @return Builder
-     */
-    public function pushInBuilder(Builder $builder) : Builder;
+    public function pushInBuilder(Builder $builder): Builder;
 
     /**
-     * @param Relation $relationship
      * @return mixed
      */
-    public static function instanceOf(Relation $relationship) : bool;
+    public static function instanceOf(Relation $relationship): bool;
 
-    /**
-     * @param string $field
-     * @param string $table
-     * @param string|null $alias
-     * @return string
-     */
-    public static function getQualifiedField(string $field, string $table, string $alias = null) : string;
+    public static function getQualifiedField(string $field, string $table, ?string $alias = null): string;
 }

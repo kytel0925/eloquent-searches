@@ -2,29 +2,31 @@
 
 namespace SlothDevGuy\Searches\Join;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use SlothDevGuy\Searches\BuilderOptions;
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
 use SlothDevGuy\Searches\JoinRelationshipBuilder;
 use SlothDevGuy\Searches\SearchBuilder;
 use SlothDevGuy\Searches\Searcher;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Exception;
+use SlothDevGuy\Searches\Support\SearchGuard;
 
 /**
- * Class SearchJoinRelationshipBuilder
- * @package SlothDevGuy\Searches\Join
+ * Translates a "relationship@alias:arguments|join-type" key into a join; its value holds
+ * the conditions applied to the related model.
+ *
+ * @phpstan-consistent-constructor
  */
 class SearchJoinRelationshipBuilder implements SearchBuilder
 {
     use BuilderOptions;
 
     /**
-     * @var string[]
+     * Used when the "searches.join_types" configuration is not available.
+     *
+     * @var array<string, string>
      */
-    protected static $supportedJoins = [
+    protected static array $supportedJoins = [
         'join' => 'join',
         'inner-join' => 'join',
         'left-join' => 'leftJoin',
@@ -33,9 +35,11 @@ class SearchJoinRelationshipBuilder implements SearchBuilder
     ];
 
     /**
-     * @var array|JoinRelationshipBuilder[]
+     * Used when the "searches.relationships" configuration is not available.
+     *
+     * @var array<string, class-string<JoinRelationshipBuilder>>
      */
-    protected static $supportedRelationships = [
+    protected static array $supportedRelationships = [
         'belongs-to' => JoinBelongsTo::class,
         'belongs-to-many' => JoinBelongsToMany::class,
         'has-one' => JoinHasOneOrMany::class,
@@ -49,227 +53,183 @@ class SearchJoinRelationshipBuilder implements SearchBuilder
     ];
 
     /**
-     * @var Collection
+     * @var array<array-key, mixed>
      */
-    protected Collection $arguments;
+    protected array $nestedConditions;
 
-    /**
-     * @var JoinRelationshipBuilder|null
-     */
     protected ?JoinRelationshipBuilder $join = null;
 
     /**
-     * @param Searcher $search
-     * @param string $relationshipWithAggregations
-     * @param mixed $nestedConditions
-     * @param array $options
+     * @param  array<string, mixed>  $options
+     *
+     * @throws InvalidSearchCondition
      */
     protected function __construct(
         protected Searcher $search,
-        protected string   $relationshipWithAggregations,
-        protected          $nestedConditions,
-        array              $options = [],
-    )
-    {
+        protected string $relationshipWithAggregations,
+        mixed $nestedConditions,
+        array $options = [],
+    ) {
         $this->options = static::defaultOptions(array_merge([
-            'from_alias' => $this->search()->option('from_alias'),
+            'from_alias' => $this->search->option('from_alias'),
         ], $options));
 
-        $this->buildJoinArguments();
+        $this->buildJoinArguments($nestedConditions);
     }
 
-    /**
-     * @return Searcher
-     */
-    public function search() : Searcher
+    public function search(): Searcher
     {
         return $this->search;
     }
 
-    /**
-     * @return JoinRelationshipBuilder|null
-     */
-    public function join() : JoinRelationshipBuilder|null
+    public function join(): ?JoinRelationshipBuilder
     {
         return $this->join;
     }
 
-    /**
-     * @param Builder $builder
-     * @return Builder
-     */
     public function pushInQueryBuilder(Builder $builder): Builder
     {
-        if(!$this->join()) {
-            //class, method, reason, action
-            $this->logError(__FUNCTION__, 'unsupported-join', 'skip-join', [
-                'raw_relationship' => $this->relationshipWithAggregations,
-                'from_model' => get_class($this->search()->from()),
-            ]);
-
+        if (! $this->join) {
             return $builder;
         }
 
-        $builder = $this->join()->pushInBuilder($builder);
+        $builder = $this->join->pushInBuilder($builder);
 
-        //recursive call (the nest conditions will be handled by another searcher instance)
-        $search = $this->search();
-        $search = new $search($this->join()->to(), $this->nestedConditions, $builder, [
-            'from_alias' => $this->join()->option('to_table_alias'),
+        // the nested conditions are handled by another searcher over the related model
+        $search = $this->search;
+
+        $nested = new $search($this->join->to(), $this->nestedConditions, $builder, [
+            'from_alias' => $this->join->option('to_table_alias'),
         ]);
 
-        return $search->builder();
+        return $nested->builder();
     }
 
     /**
-     * @return $this
+     * @throws InvalidSearchCondition
      */
-    protected function buildJoinArguments()
+    protected function buildJoinArguments(mixed $nestedConditions): void
     {
         $arguments = collect(explode('|', $this->relationshipWithAggregations))
-            ->map('trim');
+            ->map(fn (string $argument) => trim($argument));
 
-        //the relation should be the one in curly brackets or by default the first one
-        $matches = [];
-        $relation = $arguments->first(function ($argument) use (&$matches){
-            return preg_match('/^\{(.*)}$/', $argument, $matches);
-        });
+        // the relationship is the argument between curly brackets, or the first one
+        $index = $arguments->search(fn (string $argument) => (bool) preg_match('/^\{(.*)}$/', $argument));
 
-        if ($relation) {
-            $relation = array_pop($matches);
+        if ($index !== false) {
+            $relation = substr($arguments->pull($index), 1, -1);
+        } else {
+            $relation = (string) $arguments->shift();
         }
 
-        $relation = $relation ? : $arguments->shift();
+        [$relation, $relationArguments] = array_pad(explode(':', $relation, 2), 2, null);
+        [$relation, $alias] = array_pad(explode('@', $relation, 2), 2, null);
 
-        @list($relation, $relationArguments) = explode(':', $relation);
-        @list($relation, $alias) = explode('@', $relation);
+        $from = $this->search->from();
+        $name = method_exists($from, Str::camel($relation)) ? Str::camel($relation) : $relation;
 
-        $this->options['relation'] = $relation;
+        $relationship = $this->guard()->relation($from, $name);
+
+        // not a (joinable) relationship: the key is handled by another search builder
+        if (! $relationship) {
+            return;
+        }
+
+        $this->options['relation'] = $name;
         $this->options['alias'] = $alias;
 
-        if(!is_null($relationArguments)){
-            $relationArguments = collect(explode(',', $relationArguments))
-                ->map('trim')
-                ->filter()
-                ->toArray();
-        }
+        $joinTypes = static::supportedJoins();
 
-        $this->arguments = $arguments->map(function ($argument){
-            if (in_array($argument, static::$supportedJoins)) {
+        foreach ($arguments as $argument) {
+            if (in_array($argument, $joinTypes, true)) {
                 $this->options['method'] = $argument;
-            } elseif (isset(static::$supportedJoins[$argument])) {
-                $this->options['method'] = static::$supportedJoins[$argument];
-            }
-
-            return $argument;
-        });
-
-        try{
-            $from = $this->search()->from();
-
-            $camelRelation = Str::camel($relation);
-            if(method_exists($from, $camelRelation)){
-                $relation = $camelRelation;
-            }
-
-            if (!method_exists($from, $relation)) {
-                return $this;
-            }
-
-            $relationship = call_user_func_array([$from, $relation], []);
-
-            if(!($relationship instanceof Relation)){
-                $this->logDebug(__FUNCTION__, 'relationship-call-error', 'leave-empty-join-arguments');
-
-                return $this;
-            }
-
-            $relationshipKey = Str::kebab(class_basename($relationship));
-            $this->options['relationship'] = $relationshipKey;
-
-            $joinAdapter = static::$supportedRelationships[$relationshipKey];
-            if($joinAdapter::instanceOf($relationship)){
-                $this->join = new $joinAdapter($from, $relationship, [
-                    'method' => $this->options['method'],
-                    'from_table_alias' => $this->search()->option('from_alias'),
-                    'to_table_alias' => $alias? : null,
-                    'relation_arguments' => $relationArguments,
-                ]);
-            }
-
-            if(!$this->join){
-                $this->logDebug(__FUNCTION__, 'unsupported-relationship-call-error', 'null-join');
+            } elseif (isset($joinTypes[$argument])) {
+                $this->options['method'] = $joinTypes[$argument];
+            } else {
+                throw InvalidSearchCondition::unknownArgument($argument);
             }
         }
-        catch (Exception $ex){
-            $this->logError(__FUNCTION__, 'relationship-call-error', 'leave-empty-join-arguments', [
-                'exception' => get_class($ex),
-                'exception_message' => $ex->getMessage(),
-            ]);
 
-            return $this;
+        if ($alias !== null) {
+            $this->guard()->assertAlias($alias);
         }
 
-        return $this;
+        $this->nestedConditions = $this->normalizeNestedConditions($nestedConditions);
+
+        $relationshipKey = Str::kebab(class_basename($relationship));
+        $this->options['relationship'] = $relationshipKey;
+
+        $joinAdapter = static::supportedRelationships()[$relationshipKey] ?? null;
+
+        if (! $joinAdapter || ! $joinAdapter::instanceOf($relationship)) {
+            throw InvalidSearchCondition::unsupportedRelation($name, class_basename($relationship));
+        }
+
+        $this->join = new $joinAdapter($from, $relationship, [
+            'method' => $this->options['method'],
+            'from_table_alias' => $this->search->option('from_alias'),
+            'to_table_alias' => $alias ?: null,
+            'relation_arguments' => is_null($relationArguments) ? [] : array_values(array_filter(
+                array_map('trim', explode(',', $relationArguments)),
+                fn (string $argument) => $argument !== '',
+            )),
+        ]);
     }
 
     /**
-     * @param string $method
-     * @param string $reason
-     * @param string $action
-     * @param array $context
-     * @return $this
+     * @return array<array-key, mixed>
+     *
+     * @throws InvalidSearchCondition
      */
-    protected function logDebug(string $method, string $reason, string $action, array $context = [])
+    protected function normalizeNestedConditions(mixed $conditions): array
     {
-        $class = class_basename($this);
+        if (is_null($conditions) || $conditions === '') {
+            return [];
+        }
 
-        $context = array_merge($this->options, $context);
+        if (! is_array($conditions)) {
+            throw InvalidSearchCondition::invalidValue('relationship conditions must be an array');
+        }
 
-        Log::debug(implode(', ', compact('class', 'method', 'reason', 'action')), $context);
-
-        return $this;
+        return $conditions;
     }
 
-    /**
-     * @param string $method
-     * @param string $reason
-     * @param string $action
-     * @param array $context
-     * @return $this
-     */
-    protected function logError(string $method, string $reason, string $action, array $context = [])
+    protected function guard(): SearchGuard
     {
-        $class = class_basename($this);
-
-        $context = array_merge($this->options, $context);
-
-        Log::error(implode(', ', compact('class', 'method', 'reason', 'action')), $context);
-
-        return $this;
+        return app(SearchGuard::class);
     }
 
     /**
-     * @param Searcher $search
-     * @param string $key
-     * @param mixed $value
-     * @param array $options
-     * @return SearchBuilder|null
+     * @return array<string, string>
      */
-    public static function buildFromKeyAndValue(Searcher $search, string $key, $value, array $options = []): SearchBuilder|null
+    public static function supportedJoins(): array
+    {
+        return config('searches.join_types') ?: static::$supportedJoins;
+    }
+
+    /**
+     * @return array<string, class-string<JoinRelationshipBuilder>>
+     */
+    public static function supportedRelationships(): array
+    {
+        return config('searches.relationships') ?: static::$supportedRelationships;
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     *
+     * @throws InvalidSearchCondition
+     */
+    public static function buildFromKeyAndValue(Searcher $search, string $key, mixed $value, array $options = []): ?SearchBuilder
     {
         $builder = new static($search, $key, $value, $options);
 
-        if(!$builder->join()){
-            $builder = null;
-        }
-
-        return $builder;
+        return $builder->join() ? $builder : null;
     }
 
     /**
-     * @param array $options
-     * @return array
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
      */
     public static function defaultOptions(array $options = []): array
     {

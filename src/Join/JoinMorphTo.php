@@ -5,36 +5,31 @@ namespace SlothDevGuy\Searches\Join;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
+use SlothDevGuy\Searches\Support\SearchGuard;
 
 /**
- * Class JoinMorphTo
- * @package SlothDevGuy\Searches\Join
+ * Joins a morph-to relationship; the related type is given as "relation:type".
  */
 class JoinMorphTo extends JoinRelationship
 {
-    /**
-     * @param Model $from
-     * @param MorphTo $relationship
-     * @param array $options
-     */
     public function __construct(
         protected Model $from,
-        protected  MorphTo $relationship,
+        protected MorphTo $relationship,
         array $options = []
-    )
-    {
+    ) {
         $this->options = static::defaultOptions($options);
     }
 
     public function to(): Model
     {
-        return $this->option('to')? : parent::to();
+        return $this->option('to') ?: parent::to();
     }
 
     /**
      * @return array[]
      */
-    public function joins() : array
+    public function joins(): array
     {
         $baseJoin = [
             'table' => $this->getJoinContext(),
@@ -44,24 +39,18 @@ class JoinMorphTo extends JoinRelationship
         return [$baseJoin];
     }
 
-    /**
-     * @return array
-     */
-    public function on() : array
+    public function on(): array
     {
         $relationship = $this->relationship;
 
-        $first = $this->getToTableQualifiedField($relationship->getOwnerKeyName()? : $this->to()->getKeyName());
+        $first = $this->getToTableQualifiedField($relationship->getOwnerKeyName() ?: $this->to()->getKeyName());
         $operator = $this->joinOperator();
         $second = $this->getFromTableQualifiedField($relationship->getForeignKeyName());
 
         return compact('first', 'operator', 'second');
     }
 
-    /**
-     * @return array
-     */
-    public function wheres() : array
+    public function wheres(): array
     {
         $relationship = $this->relationship;
 
@@ -74,34 +63,28 @@ class JoinMorphTo extends JoinRelationship
         ];
     }
 
-    /**
-     * @return string
-     */
-    public function getModelClass() : string
+    public function getModelClass(): string
     {
-        return morph_model_alias($this->to())? : get_class($this->to());
+        return morph_model_alias($this->to()) ?: get_class($this->to());
     }
 
-    /**
-     * @param Relation $relationship
-     * @return bool
-     */
     public static function instanceOf(Relation $relationship): bool
     {
         return $relationship instanceof MorphTo;
     }
 
-    /**
-     * @param array $options
-     * @return array
-     */
     protected static function defaultOptions(array $options = []): array
     {
         $options = parent::defaultOptions($options);
 
-        if($to = collect(data_get($options, 'relation_arguments'))->first()){
-            //classmap is a needed here
-            data_set($options, 'to', new $to);
+        // the related model of a morph-to can not be guessed: it is given as "relation:Type",
+        // where Type is a morph map alias or a model class
+        if ($to = collect(data_get($options, 'relation_arguments'))->first()) {
+            $options['to'] = app(SearchGuard::class)->morphModel($to);
+        }
+
+        if (empty($options['to'])) {
+            throw InvalidSearchCondition::invalidValue('morph-to relationships need the related type, as "relation:type"');
         }
 
         return $options;

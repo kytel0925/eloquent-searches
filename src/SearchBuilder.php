@@ -3,25 +3,21 @@
 namespace SlothDevGuy\Searches;
 
 use Illuminate\Database\Eloquent\Builder;
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
 
 /**
- * Interface SearchBuilder
- * @package SlothDevGuy\Searches
+ * Translates a single condition key (and its value) into query builder calls.
  */
 interface SearchBuilder
 {
     /**
-     * @param Searcher $search
-     * @param string $key
-     * @param $value
-     * @param array $options
-     * @return SearchBuilder|null
+     * Build the condition, or return null when this builder does not handle the key.
+     *
+     * @param  array<string, mixed>  $options
+     *
+     * @throws InvalidSearchCondition when the key is handled by this builder but is not valid
      */
-    public static function buildFromKeyAndValue(Searcher $search, string $key, $value, array $options = []) : SearchBuilder|null;
+    public static function buildFromKeyAndValue(Searcher $search, string $key, mixed $value, array $options = []): ?SearchBuilder;
 
-    /**
-     * @param Builder $builder
-     * @return Builder
-     */
-    public function pushInQueryBuilder(Builder $builder) : Builder;
+    public function pushInQueryBuilder(Builder $builder): Builder;
 }

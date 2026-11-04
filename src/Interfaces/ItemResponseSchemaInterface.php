@@ -5,39 +5,23 @@ namespace SlothDevGuy\Searches\Interfaces;
 use Closure;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Database\Eloquent\Model;
 
 /**
- * Interface ItemResponseInterface
- * @package SlothDevGuy\Searches\Interfaces
+ * Maps one model of the search results into a response item.
  */
-interface ItemResponseSchemaInterface extends Jsonable, Arrayable
+interface ItemResponseSchemaInterface extends Arrayable, Jsonable
 {
     /**
-     * @param mixed $item
+     * @param  mixed  $item
      * @return mixed
      */
     public function item($item = null);
 
-    /**
-     * @return array
-     */
-    public function map() : array;
+    public function map(): array;
 
-    /**
-     * @param array|null $keys
-     * @return ItemResponseSchemaInterface
-     */
-    public function only(array $keys = null) : ItemResponseSchemaInterface;
+    public function only(?array $keys = null): ItemResponseSchemaInterface;
 
-    /**
-     * @param array|null $keys
-     * @return ItemResponseSchemaInterface
-     */
-    public function except(array $keys = null) : ItemResponseSchemaInterface;
+    public function except(?array $keys = null): ItemResponseSchemaInterface;
 
-    /**
-     * @return Closure
-     */
-    public static function mapEach() : Closure;
+    public static function mapEach(): Closure;
 }

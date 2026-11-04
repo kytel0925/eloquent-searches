@@ -2,19 +2,15 @@
 
 namespace SlothDevGuy\Searches\Where;
 
-/**
- * Class Where
- * @package SlothDevGuy\Searches\Where
- */
+use SlothDevGuy\Searches\Exceptions\InvalidSearchCondition;
+use SlothDevGuy\Searches\WhereBuilder;
+
 class Where extends BaseWhere
 {
-    /**
-     * @var array
-     */
     protected static array $supportedMethods = ['where', 'orWhere'];
 
     /**
-     * @var array|string[]
+     * @var array<string, string>
      */
     protected static array $negatedOperators = [
         '=' => '<>',
@@ -27,22 +23,15 @@ class Where extends BaseWhere
         'not like' => 'like',
     ];
 
-    /**
-     * @return BaseWhere
-     */
-    public function redirect() : BaseWhere
+    public function redirect(): WhereBuilder
     {
         $arguments = $this->arguments();
 
-        //check if is a nest Where
-        if($arguments->option('nest')){
+        if ($arguments->option('nest')) {
             return new WhereNest($this->searchBuilder());
         }
 
-        $value = $arguments->value();
-
-        //check if we need to redirect the method
-        if(is_array($value)){
+        if (is_array($arguments->value())) {
             $arguments->method('whereIn');
 
             return new WhereIn($this->searchBuilder());
@@ -51,52 +40,34 @@ class Where extends BaseWhere
         return $this;
     }
 
-    /**
-     * @return $this
-     */
-    protected function negateIfRequired()
+    protected function negateIfRequired(): static
     {
         $arguments = $this->arguments();
 
-        if($arguments->not()) {
-            $negatedOperator = data_get(static::$negatedOperators, $arguments->operator(), $arguments->operator());
-
-            $arguments->operator($negatedOperator);
+        if ($arguments->not()) {
+            $arguments->operator(static::$negatedOperators[$arguments->operator()] ?? $arguments->operator());
         }
 
         return $this;
     }
 
-    /**
-     * @return array
-     */
-    public function where() : array
+    public function where(): array
     {
         $arguments = $this->arguments();
 
-        //check if we need to change the operator
         $this->negateIfRequired();
-
-        //or the method for the operand
         $this->syncMethodWithOperand();
 
-        //unpack field, operator and value
         $field = $this->getQualifiedField($arguments->field());
         $operator = $arguments->operator();
         $value = $arguments->value();
 
-        //check value type
-        if($response = $this->isValueAnArray($value)){
-            return $response;
+        $this->assertScalar($value);
+
+        if (in_array($operator, ['like', 'not like'], true) && ($wildcard = $arguments->option('wildcard'))) {
+            $value = str_replace('_', (string) $value, $wildcard);
         }
 
-        //is string(like) search and has a wildcard set
-        //@todo maybe only replace if a wildcard is present?
-        if(in_array($operator, ['like', 'not like']) && ($wildcard = $arguments->option('wildcard'))){
-            $value = str_replace('_', $value, $wildcard);
-        }
-
-        //pack where method and arguments
         return [
             'method' => $arguments->method(),
             'arguments' => compact('field', 'operator', 'value'),
@@ -104,20 +75,12 @@ class Where extends BaseWhere
     }
 
     /**
-     * @param mixed $value
-     * @return array|false
+     * @throws InvalidSearchCondition
      */
-    protected function isValueAnArray($value)
+    protected function assertScalar(mixed $value): void
     {
-        //check value type
-        if(is_array($value)){
-            return [
-                'method' => null,
-                'reason' => 'array-value',
-                'action' => 'skip-where',
-            ];
+        if (! is_null($value) && ! is_scalar($value) && ! $value instanceof \Stringable && ! $value instanceof \DateTimeInterface) {
+            throw InvalidSearchCondition::invalidValue('a single value is expected');
         }
-
-        return false;
     }
 }

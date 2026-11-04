@@ -7,29 +7,22 @@ use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
- * Class HasOneOrManyAdapter
- * @package SlothDevGuy\Searches\Join
+ * Joins a has-one or has-many relationship.
  */
 class JoinHasOneOrMany extends JoinRelationship
 {
-    /**
-     * @param Model $from
-     * @param HasOneOrMany $relationship
-     * @param array $options
-     */
     public function __construct(
-        protected  Model     $from,
-        protected  HasOneOrMany $relationship,
-        array      $options = [],
-    )
-    {
+        protected Model $from,
+        protected HasOneOrMany $relationship,
+        array $options = [],
+    ) {
         $this->options = static::defaultOptions($options);
     }
 
     /**
      * @return array[]
      */
-    public function on() : array
+    public function on(): array
     {
         $relationship = $this->relationship;
 
@@ -40,11 +33,7 @@ class JoinHasOneOrMany extends JoinRelationship
         return [$first, $operator, $second];
     }
 
-    /**
-     * @param Relation $relationship
-     * @return bool
-     */
-    public static function instanceOf(Relation $relationship) : bool
+    public static function instanceOf(Relation $relationship): bool
     {
         return $relationship instanceof HasOneOrMany;
     }

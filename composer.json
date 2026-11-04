@@ -1,16 +1,17 @@
 {
     "name": "sloth-dev-guy/searches",
-    "description": "Perform searches with Eloquent models using an array-like API setup",
+    "description": "Turn array-like conditions (such as an HTTP query string) into Eloquent queries with wheres, relationship joins, sorting and pagination.",
+    "type": "library",
     "keywords": [
         "laravel",
         "eloquent",
         "search",
+        "filter",
         "query-builder",
-        "database",
-        "model",
-        "generator"
+        "database"
     ],
     "homepage": "https://github.com/sloth-dev-guy/searches",
+    "license": "MIT",
     "authors": [
         {
             "name": "Telmo Rafael",
@@ -18,46 +19,53 @@
             "homepage": "https://sloth-guy.dev"
         }
     ],
-    "license": "MIT",
     "require": {
-        "php": "^8.1",
-        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
-        "illuminate/container": "^10.0|^11.0|^12.0|^13.0",
-        "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
-        "illuminate/events": "^10.0|^11.0|^12.0|^13.0"
+        "php": "^8.2",
+        "laravel/framework": "^11.0|^12.0|^13.0"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.23",
-        "laravel/framework": "^10.0|^11.0|^12.0|^13.0",
-        "laravel/pail": "^1.2.2",
-        "laravel/pint": "^1.24",
-        "laravel/sail": "^1.41",
-        "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^11.0"
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "phpunit/phpunit": "^11.5|^12.0"
     },
     "autoload": {
-        "files": [
-            "src/helpers.php"
-        ],
         "psr-4": {
             "SlothDevGuy\\Searches\\": "src/"
-        }
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/"
         }
     },
-    "suggest": {
-        "laravel/lumen-framework": "Required to use defaults functionalities inherit to the laravel frameworks (laravel|lumen) (^9.0)",
-        "illuminate/http": "Required to use custom requests object in controllers (^9.0)"
+    "scripts": {
+        "test": "phpunit",
+        "lint": "pint --test",
+        "format": "pint",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "check": [
+            "@lint",
+            "@analyse",
+            "@test"
+        ]
     },
     "extra": {
         "laravel": {
             "providers": [
                 "SlothDevGuy\\Searches\\EloquentSearchServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Searches": "SlothDevGuy\\Searches\\Facades\\Searches"
+            }
         }
-    }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

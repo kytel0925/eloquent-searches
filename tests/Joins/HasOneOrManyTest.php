@@ -4,18 +4,17 @@ namespace Tests\Joins;
 
 use SlothDevGuy\Searches\Join\JoinHasOneOrMany;
 use SlothDevGuy\Searches\Join\SearchJoinRelationshipBuilder;
-use Tests\database\Address;
-use Tests\database\Person;
-use Tests\database\Task;
+use Tests\Fixtures\Models\Address;
+use Tests\Fixtures\Models\Person;
+use Tests\Fixtures\Models\Task;
 use Tests\TestCase;
 
 class HasOneOrManyTest extends TestCase
 {
-    use MockSearcher, JoinBuilderAssertions;
+    use JoinBuilderAssertions, MockSearcher;
 
-    public function testJoins()
+    public function test_joins()
     {
-        $this->loadTestModels();
 
         $joinData = [
             'values' => [],
@@ -23,13 +22,13 @@ class HasOneOrManyTest extends TestCase
             'table' => 'addresses',
             'relation' => 'addresses',
             'foreign_key' => 'person_id',
-            'aliases' => [null, 'foo', 'bar']
+            'aliases' => [null, 'foo', 'bar'],
         ];
 
         $joinTypes = [null, 'join', 'left-join'];
 
         $from = [
-            'model' => $model = new Person(),
+            'model' => $model = new Person,
             'table' => $model->getTable(),
         ];
 
@@ -37,8 +36,8 @@ class HasOneOrManyTest extends TestCase
             $alias = data_get($joinData, "aliases.$index");
 
             $join = collect([
-                $joinData['relation'] . ($alias? "@$alias" : ''),
-                $joinType
+                $joinData['relation'].($alias ? "@$alias" : ''),
+                $joinType,
             ])->filter()->implode('|');
 
             /** @var SearchJoinRelationshipBuilder $joinBuilder */
@@ -46,30 +45,29 @@ class HasOneOrManyTest extends TestCase
 
             $this->assertNotNull($joinBuilder);
 
-            $join = $alias? "{$joinData['table']} as {$alias}" : $joinData['table'];
-            $joinContext = $alias? : $joinData['table'];
+            $join = $alias ? "{$joinData['table']} as {$alias}" : $joinData['table'];
+            $joinContext = $alias ?: $joinData['table'];
 
             $this->assertJoinBuilder($joinBuilder, [
                 'join_instance_of' => JoinHasOneOrMany::class,
                 'related_instance_of' => $joinData['model'],
-                'method' => $joinType? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
+                'method' => $joinType ? data_get(static::$supportedJoins, $joinType, 'join') : 'join',
                 'arguments' => [
                     [
                         'table' => $join,
                         'arguments' => [
                             "{$from['table']}.id",
-                            "=",
-                            "{$joinContext}.{$joinData['foreign_key']}"
-                        ]
-                    ]
-                ]
+                            '=',
+                            "{$joinContext}.{$joinData['foreign_key']}",
+                        ],
+                    ],
+                ],
             ]);
         }
     }
 
-    public function testJoinWithCustomKeys()
+    public function test_join_with_custom_keys()
     {
-        $this->loadTestModels();
 
         $joinData = [
             'values' => [],
@@ -80,7 +78,7 @@ class HasOneOrManyTest extends TestCase
         ];
 
         $from = [
-            'model' => $model = new Person(),
+            'model' => $model = new Person,
             'table' => $model->getTable(),
         ];
 
@@ -102,11 +100,11 @@ class HasOneOrManyTest extends TestCase
                     'table' => $join,
                     'arguments' => [
                         "{$from['table']}.id",
-                        "=",
-                        "{$joinContext}.{$joinData['foreign_key']}"
-                    ]
-                ]
-            ]
+                        '=',
+                        "{$joinContext}.{$joinData['foreign_key']}",
+                    ],
+                ],
+            ],
         ]);
     }
 }

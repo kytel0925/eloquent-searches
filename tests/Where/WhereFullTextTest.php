@@ -8,20 +8,19 @@ use Tests\TestCase;
 
 /**
  * Class WhereFullTextTest
- * @package Tests\Where
  */
 class WhereFullTextTest extends TestCase
 {
     use MockSearcher, WhereBuilderAssertions;
 
-    public function testFullText()
+    public function test_full_text()
     {
         $fields = 'foo_1,foo_2';
         $value = 'some full text value';
 
         $aliases = ['full-text', 'where-full-text'];
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $key = implode('|', array_filter([$fields, $alias]));
 
             /** @var SearchWhereBuilder $whereBuilder */
@@ -33,14 +32,14 @@ class WhereFullTextTest extends TestCase
                 'where_instance_of' => WhereFullText::class,
                 'method' => 'whereFullText',
                 'arguments' => [
-                    array_map(fn($field) => "test.{$field}", explode(',', $fields)),
-                    $value
-                ]
+                    array_map(fn ($field) => "test.{$field}", explode(',', $fields)),
+                    $value,
+                ],
             ]);
         }
     }
 
-    public function testNotFullText()
+    public function test_not_full_text()
     {
         $fields = 'foo_1,foo_2';
         $value = 'some full text value';
@@ -48,7 +47,7 @@ class WhereFullTextTest extends TestCase
         $aliases = ['full-text', 'where-full-text'];
         $negations = collect(['not', '!']);
 
-        foreach ($aliases as $alias){
+        foreach ($aliases as $alias) {
             $not = $negations->random();
             $key = implode('|', array_filter([$fields, $not, $alias]));
 
@@ -61,8 +60,8 @@ class WhereFullTextTest extends TestCase
                 'where_instance_of' => WhereFullText::class,
                 'method' => 'whereNot',
                 'arguments' => [
-                    function(){ },
-                ]
+                    function () {},
+                ],
             ]);
         }
     }
