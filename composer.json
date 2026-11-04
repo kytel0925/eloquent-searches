@@ -57,7 +57,10 @@
         "laravel": {
             "providers": [
                 "SlothDevGuy\\Searches\\EloquentSearchServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Searches": "SlothDevGuy\\Searches\\Facades\\Searches"
+            }
         }
     },
     "config": {

@@ -43,7 +43,7 @@ Person::search([
 composer require sloth-dev-guy/searches
 ```
 
-The service provider is registered by package discovery.
+The service provider and the `Searches` facade are registered by package discovery.
 Publishing the configuration file is optional:
 
 ```bash
@@ -52,10 +52,11 @@ php artisan vendor:publish --tag=searches-config
 
 ## Basic usage
 
-There are three equivalent ways to start a search:
+There are four equivalent ways to start a search:
 
 ```php
 use SlothDevGuy\Searches\EloquentSearch;
+use SlothDevGuy\Searches\Facades\Searches;
 
 // 1. The model trait
 class Person extends Model
@@ -66,15 +67,18 @@ class Person extends Model
 Person::search(['name' => 'Ada']);
 (new Person)->newSearch(['name' => 'Ada']);
 
-// 2. The helper
+// 2. The facade
+Searches::make(Person::class, ['name' => 'Ada']);
+
+// 3. The helper
 eloquent_search(Person::class, ['name' => 'Ada']);
 
-// 3. The class itself
+// 4. The class itself
 new \SlothDevGuy\Searches\Search(Person::class, ['name' => 'Ada']);
 ```
 
 > The trait's static `search()` method conflicts with Laravel Scout's `Searchable` trait.
-> If a model uses both, call `newSearch()` or the helper instead, and resolve the conflict
+> If a model uses both, call `newSearch()` or the facade instead, and resolve the conflict
 > with `use EloquentSearch { search as protected eloquentSearch; }`.
 
 Every one of them returns a `SlothDevGuy\Searches\Searcher`:
@@ -288,6 +292,8 @@ class CountryLocationsRequest extends SearchRequest
 Route::get('countries/{country}/locations', fn (CountryLocationsRequest $request) => (new SearchAction($request))->handle(Location::class));
 ```
 
+You can also build the search yourself from a request: `Searches::fromRequest(Person::class, $request)`.
+
 ## Errors
 
 Invalid conditions throw `SlothDevGuy\Searches\Exceptions\InvalidSearchCondition`.
@@ -305,6 +311,7 @@ The messages are safe to show to API clients.
 
 | Key | Default | |
 | --- | --- | --- |
+| `searcher` | `Search::class` | class built by the facade, helper and trait |
 | `strict` | `false` (`SEARCHES_STRICT`) | require allow lists on every searched model |
 | `request.max_per_page` | `100` | upper limit of `max` in `SearchRequest` |
 | `full_text.min_length` | `3` | shorter full text values are ignored |
@@ -320,6 +327,7 @@ The messages are safe to show to API clients.
   `$supportedMethods`, implement `where()` and `negateIfRequired()`, and add the class to `searches.wheres`.
 * **Relationships:** extend `SlothDevGuy\Searches\Join\JoinRelationship`, implement `on()` and
   `instanceOf()`, and map it in `searches.relationships` (key: the relationship class in kebab case).
+* **The searcher:** extend `SlothDevGuy\Searches\Search` (or implement `Searcher`) and set `searches.searcher`.
 * **Responses:** extend `SearchAction` and override `$defaultResponseClass` / `$defaultResponseItemClass`,
   or implement the `SearchResponseSchemaInterface` / `ItemResponseSchemaInterface` contracts.
 

@@ -1,9 +1,22 @@
 <?php
 
 use SlothDevGuy\Searches\Join;
+use SlothDevGuy\Searches\Search;
 use SlothDevGuy\Searches\Where;
 
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Searcher implementation
+    |--------------------------------------------------------------------------
+    |
+    | The class built by the Searches facade, the eloquent_search() helper and
+    | the EloquentSearch model trait. It must implement the Searcher contract.
+    |
+    */
+
+    'searcher' => Search::class,
 
     /*
     |--------------------------------------------------------------------------

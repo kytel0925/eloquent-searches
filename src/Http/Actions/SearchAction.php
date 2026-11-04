@@ -12,6 +12,7 @@ use SlothDevGuy\Searches\Interfaces\SearchResponseSchemaInterface as SearchRespo
 use SlothDevGuy\Searches\ResponseModels\ItemResponseSchema;
 use SlothDevGuy\Searches\ResponseModels\SearchResponseSchema;
 use SlothDevGuy\Searches\Searcher;
+use SlothDevGuy\Searches\SearchFactory;
 
 /**
  * Runs a search from a SearchRequest and builds the response schema.
@@ -143,7 +144,7 @@ class SearchAction
      */
     public function execute(): void
     {
-        $search = eloquent_search($this->from(), $this->request()->getConditions(), $this->options());
+        $search = app(SearchFactory::class)->make($this->from(), $this->request()->getConditions(), $this->options());
 
         try {
             // build the query now, so invalid conditions are reported before the response is rendered

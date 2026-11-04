@@ -19,11 +19,12 @@ This release hardens the package for untrusted input and modernizes it as a Lara
 
 ### Added
 
+- `Searches` facade and `SearchFactory` service (`make()`, `fromRequest()`).
 - `SearchAction::handle(Model|string $from)`.
 - `SearchRequest::searchOptions()` and the `MergesRouteParameters` trait (`routeParameterKeys()`).
 - `InvalidSearchCondition` exception (implements `SearchException`, with `key()`); `SearchAction` reports it as a 422 validation error.
 - The configuration is merged and publishable (`php artisan vendor:publish --tag=searches-config`).
-  Where builders, join types and relationship adapters are now configurable.
+  The searcher class, where builders, join types and relationship adapters are now configurable.
 - `order` accepts a `[column => direction]` map, and `group` accepts comma separated columns.
 
 ### Fixed
@@ -42,7 +43,7 @@ This release hardens the package for untrusted input and modernizes it as a Lara
 
 - Requires PHP 8.2+ and Laravel 11, 12 or 13. Lumen and Laravel 10 are no longer supported.
 - `Search` no longer reads `page`, `max`, `order`, `group` and `distinct` from the current request.
-  Pass them as options, or use `SearchAction`.
+  Pass them as options, or use `SearchAction` / `Searches::fromRequest()`.
 - `SearchRequest` extends `FormRequest`, and `all()` returns the whole input; use `getConditions()` for the conditions.
 - `RequestValidate` and `MergeRouteArguments` were removed (replaced by `FormRequest` and `MergesRouteParameters`).
 - Invalid conditions throw `InvalidSearchCondition` instead of being logged and skipped. Invalid `between` values,

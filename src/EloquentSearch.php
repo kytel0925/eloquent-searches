@@ -32,7 +32,7 @@ trait EloquentSearch
     /**
      * Start a new search over this model.
      *
-     * Use this method when another trait, such as Laravel Scout's
+     * Use this method (or the Searches facade) when another trait, such as Laravel Scout's
      * Searchable, already defines a static search() method.
      *
      * @param  array<string, mixed>|Arrayable<string, mixed>  $conditions
@@ -40,7 +40,7 @@ trait EloquentSearch
      */
     public function newSearch(array|Arrayable $conditions = [], array $options = []): Searcher
     {
-        return eloquent_search($this, $conditions, $options);
+        return app(SearchFactory::class)->make($this, $conditions, $options);
     }
 
     /**

@@ -14,6 +14,12 @@ class EloquentSearchServiceProvider extends ServiceProvider
         $this->app->singleton(SearchGuard::class, fn ($app) => new SearchGuard(
             strict: (bool) $app['config']->get('searches.strict', false),
         ));
+
+        $this->app->singleton(SearchFactory::class, fn ($app) => new SearchFactory(
+            searcher: $app['config']->get('searches.searcher', Search::class),
+        ));
+
+        $this->app->alias(SearchFactory::class, 'searches');
     }
 
     public function boot(): void

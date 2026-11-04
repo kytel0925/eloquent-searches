@@ -4,8 +4,8 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
-use SlothDevGuy\Searches\Search;
 use SlothDevGuy\Searches\Searcher;
+use SlothDevGuy\Searches\SearchFactory;
 
 if (! function_exists('eloquent_search')) {
     /**
@@ -17,7 +17,7 @@ if (! function_exists('eloquent_search')) {
      */
     function eloquent_search(Model|string $from, array|Arrayable $conditions = [], array $options = []): Searcher
     {
-        return new Search($from, $conditions, null, $options);
+        return app(SearchFactory::class)->make($from, $conditions, $options);
     }
 }
 
